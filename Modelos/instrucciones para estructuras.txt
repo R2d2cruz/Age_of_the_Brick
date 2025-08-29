@@ -1,0 +1,10 @@
+instrucciones:
+
+1. Construir modelo en studio, con orden de construccion
+2. Importar por Ldraw a blender
+3. Desparentar manteniendo transformaciones
+4. Aplicar transformaciones en la mesh
+5. Seleccionar Collecion y correr el codigo "Extraction_Code.py"
+6. Seleccionar armadura, crear idle con posicion inicial
+7. Seleccionar armadura, ejecutar codigo "Building_animation.py"
+8. Seleccionar armadura, ejecutar codigo "Explotion_animation.py"
