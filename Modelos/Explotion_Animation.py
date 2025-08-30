@@ -1,93 +1,139 @@
 import bpy
 import random
-import math
-from mathutils import Vector
+from mathutils import Vector, Quaternion
 
-# --------------------------
+# ==========================
 # Parámetros
-# --------------------------
-fixed_index     = 19   # bloques que se quedan quietos (del 1 al fixed_index)
-start_frame     = 1    # frame inicial
-explosion_frame = 10   # frame en el que empieza la explosión
-fall_frame      = 30   # frame donde los bloques caen
-strength        = 0.05  # qué tan lejos salen volando
-rot_strength    = math.radians(720)  # hasta cuántos grados giran (en radianes)
+# ==========================
+fixed_index     = 19      # huesos 1..fixed_index se quedan quietos
+start_frame     = 1
+explosion_frame = 30
+fall_frame      = 50
+strength        = 0.05    # distancia radial del "salto"
+ARMATURE_NAME   = "Armature"
+random_angle    = 1.7     # magnitud del giro aleatorio (radianes aprox.)
+fall_angle_max  = 3.14    # rotación extra dramática (~180°) al caer
 
-# --------------------------
-# Armature
-# --------------------------
-armature_name = "Armature"  # cambia si tu armature se llama distinto
-armature = bpy.data.objects.get(armature_name)
-if armature is None or armature.type != 'ARMATURE':
-    raise Exception("❌ No se encontró el armature llamado 'Armature'")
+# Rebotes
+num_bounces     = 2       # cuántos rebotes pequeños
+bounce_height   = 0.04    # altura máxima del primer rebote
+bounce_decay    = 0.5     # cada rebote es más pequeño
+bounce_spacing  = 10       # frames entre rebotes
 
-# --------------------------
-# Crear Action
-# --------------------------
-action_name = "explosion_fall"
-if action_name in bpy.data.actions:
-    action = bpy.data.actions[action_name]
-else:
-    action = bpy.data.actions.new(action_name)
+# ==========================
+# Obtener armature
+# ==========================
+armature = bpy.data.objects.get(ARMATURE_NAME)
+if not armature or armature.type != 'ARMATURE':
+    raise Exception(f"No se encontró armature '{ARMATURE_NAME}'")
 
+action_name = "Explosion"
+action = bpy.data.actions.get(action_name) or bpy.data.actions.new(action_name)
 armature.animation_data_create()
 armature.animation_data.action = action
 
-# --------------------------
-# Animación huesos
-# --------------------------
-for obj_index, pbone in enumerate(armature.pose.bones, start=1):
-    bone_name = pbone.name
-    
-    # Guardamos posición y rotación original
-    original_loc = pbone.location.copy()
-    original_rot = pbone.rotation_euler.copy()
-    
-    # --- Bloques fijos ---
-    if obj_index <= fixed_index:
-        pbone.location = original_loc
-        pbone.rotation_euler = original_rot
-        pbone.keyframe_insert(data_path="location", frame=start_frame)
-        pbone.keyframe_insert(data_path="location", frame=fall_frame)
-        pbone.keyframe_insert(data_path="rotation_euler", frame=start_frame)
-        pbone.keyframe_insert(data_path="rotation_euler", frame=fall_frame)
-        continue
-    
-    # --- Bloques que explotan ---
-    # Frame inicial (quietos)
-    pbone.location = original_loc
-    pbone.rotation_euler = original_rot
-    pbone.keyframe_insert(data_path="location", frame=start_frame)
-    pbone.keyframe_insert(data_path="rotation_euler", frame=start_frame)
-    
-    # Frame de explosión
-    dx = (random.random() - 0.5) * 2 * strength
-    dy = (random.random() - 0.5) * 2 * strength
-    dz = random.random() * strength * 2  # más fuerza hacia arriba
-    
-    explosion_loc = original_loc + Vector((dx, dy, dz))
-    
-    rx = (random.random() - 0.5) * rot_strength
-    ry = (random.random() - 0.5) * rot_strength
-    rz = (random.random() - 0.5) * rot_strength
-    explosion_rot = (
-        original_rot.x + rx,
-        original_rot.y + ry,
-        original_rot.z + rz
-    )
-    
-    pbone.location = explosion_loc
-    pbone.rotation_euler = explosion_rot
-    pbone.keyframe_insert(data_path="location", frame=explosion_frame)
-    pbone.keyframe_insert(data_path="rotation_euler", frame=explosion_frame)
-    
-    # Frame de caída (regresan al suelo, pero no necesariamente a su sitio original)
-    fall_loc = Vector((explosion_loc.x, explosion_loc.y, original_loc.z))  # mismo X/Y, en Z caen
-    fall_rot = explosion_rot  # se quedan girados
-    
-    pbone.location = fall_loc
-    pbone.rotation_euler = fall_rot
-    pbone.keyframe_insert(data_path="location", frame=fall_frame)
-    pbone.keyframe_insert(data_path="rotation_euler", frame=fall_frame)
+# Epicentro en ORIGEN MUNDIAL
+origin_world = Vector((0.0, 0.0, 0.0))
+origin_arm   = armature.matrix_world.inverted() @ origin_world
 
-print("✅ Animación 'explosion_fall' creada.")
+# Suelo global
+positions_world = [armature.matrix_world @ pb.bone.head_local for pb in armature.pose.bones]
+min_z_world = min(v.z for v in positions_world)
+
+# ==========================
+# Utilidad
+# ==========================
+def quat_align_restZ_to_dir(pbone, dir_arm):
+    rest_mat = pbone.bone.matrix_local.to_3x3()
+    rest_z   = (rest_mat @ Vector((0,0,1))).normalized()
+    return rest_z.rotation_difference(dir_arm)
+
+# ==========================
+# Animación
+# ==========================
+for idx, pbone in enumerate(armature.pose.bones, start=1):
+    orig_loc = pbone.location.copy()
+    pos_arm = pbone.matrix.translation
+    pos_world = armature.matrix_world @ pos_arm  
+
+    if idx <= fixed_index:
+        pbone.location = orig_loc
+        pbone.rotation_mode = 'QUATERNION'
+        pbone.keyframe_insert("location", frame=start_frame)
+        pbone.keyframe_insert("location", frame=fall_frame)
+        pbone.keyframe_insert("rotation_quaternion", frame=start_frame)
+        pbone.keyframe_insert("rotation_quaternion", frame=fall_frame)
+        continue
+
+    dir_arm = (pos_arm - origin_arm)
+    if dir_arm.length == 0:
+        dir_arm = Vector((0,0,1))
+    dir_arm.normalize()
+
+    # === Frame inicial
+    pbone.location = orig_loc
+    pbone.rotation_mode = 'QUATERNION'
+    pbone.keyframe_insert("location", frame=start_frame)
+    pbone.keyframe_insert("rotation_quaternion", frame=start_frame)
+
+    # === Frame explosión
+    explosion_loc = orig_loc + dir_arm * strength
+    q_align = quat_align_restZ_to_dir(pbone, dir_arm)
+
+    rand_axis = dir_arm.cross(Vector((0,0,1)))
+    if rand_axis.length < 1e-6:  
+        rand_axis = Vector((1,0,0))  
+    rand_axis.normalize()
+    rand_angle = random.uniform(-random_angle, random_angle)
+    q_rand = Quaternion(rand_axis, rand_angle)
+
+    q_final = q_rand @ q_align
+
+    pbone.location = explosion_loc
+    pbone.rotation_quaternion = q_final
+    pbone.keyframe_insert("location", frame=explosion_frame)
+    pbone.keyframe_insert("rotation_quaternion", frame=explosion_frame)
+
+    # === Frame caída
+    fall_world = Vector((pos_world.x, pos_world.y, min_z_world))
+    fall_arm = armature.matrix_world.inverted() @ fall_world
+    
+    fall_loc = explosion_loc.copy()
+    fall_loc.z = fall_arm.z - pbone.bone.head_local.z  
+
+    fall_axis = Vector((random.random(), random.random(), random.random())).normalized()
+    fall_angle = random.uniform(-fall_angle_max, fall_angle_max)
+    q_fall_extra = Quaternion(fall_axis, fall_angle)
+
+    q_fall = q_fall_extra @ q_final
+
+    pbone.location = fall_loc
+    pbone.rotation_quaternion = q_fall
+    pbone.keyframe_insert("location", frame=fall_frame)
+    pbone.keyframe_insert("rotation_quaternion", frame=fall_frame)
+
+    # === Rebotes
+    bounce_loc = fall_loc.copy()
+    bounce_rot = q_fall
+    for b in range(1, num_bounces+1):
+        bounce_frame = fall_frame + b * bounce_spacing
+        height = bounce_height * (bounce_decay ** (b-1))
+
+        # subir
+        bounce_loc.z = fall_loc.z + height
+        bounce_axis = Vector((random.random(), random.random(), random.random())).normalized()
+        bounce_angle = random.uniform(-0.5, 0.5) * (1/b)  # cada vez menos rotación
+        bounce_rot = Quaternion(bounce_axis, bounce_angle) @ bounce_rot
+
+        pbone.location = bounce_loc
+        pbone.rotation_quaternion = bounce_rot
+        pbone.keyframe_insert("location", frame=bounce_frame)
+        pbone.keyframe_insert("rotation_quaternion", frame=bounce_frame)
+
+        # bajar
+        bounce_frame += int(bounce_spacing/2)
+        bounce_loc.z = fall_loc.z
+        pbone.location = bounce_loc
+        pbone.keyframe_insert("location", frame=bounce_frame)
+
+print("✅ 'explosion_outward_random_fall_bounce' lista con rebotes pequeños al final.")
