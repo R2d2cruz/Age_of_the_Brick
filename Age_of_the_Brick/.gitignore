@@ -33,6 +33,12 @@
 
 # Visual Studio cache directory
 .vs/
+.vscode/
+.idea/
+
+# --- Archivos de sistema ---
+.DS_Store
+Thumbs.db
 
 # Gradle cache directory
 .gradle/
