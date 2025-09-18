@@ -1,0 +1,84 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ba6f4db6bc9c5845b67cec844bd873f, type: 3}
+  m_Name: VillagerStats
+  m_EditorClassIdentifier: Assembly-CSharp::UnitStats
+  unitName: 
+  statsPorEra:
+  - vida: 50
+    defensaLigera: 0
+    defensaPesada: 0
+    vision: 7
+    velocidadMovimiento: 2.6
+    alcance: 1
+    velocidadAtaque: 2
+    ataqueLigero: 2
+    ataquePesado: 0
+    velocidadCuracion: 0
+    velocidadConstruccion: 20
+  - vida: 55
+    defensaLigera: 1
+    defensaPesada: 0
+    vision: 7
+    velocidadMovimiento: 2.6
+    alcance: 1
+    velocidadAtaque: 2
+    ataqueLigero: 3
+    ataquePesado: 0
+    velocidadCuracion: 0
+    velocidadConstruccion: 22
+  - vida: 60
+    defensaLigera: 1
+    defensaPesada: 1
+    vision: 8
+    velocidadMovimiento: 2.6
+    alcance: 1
+    velocidadAtaque: 2
+    ataqueLigero: 4
+    ataquePesado: 0
+    velocidadCuracion: 0
+    velocidadConstruccion: 24
+  - vida: 65
+    defensaLigera: 2
+    defensaPesada: 1
+    vision: 8
+    velocidadMovimiento: 2.6
+    alcance: 1
+    velocidadAtaque: 2
+    ataqueLigero: 5
+    ataquePesado: 0
+    velocidadCuracion: 0
+    velocidadConstruccion: 28
+  - vida: 70
+    defensaLigera: 2
+    defensaPesada: 2
+    vision: 9
+    velocidadMovimiento: 2.6
+    alcance: 1
+    velocidadAtaque: 2
+    ataqueLigero: 6
+    ataquePesado: 0
+    velocidadCuracion: 0
+    velocidadConstruccion: 30
+  - vida: 75
+    defensaLigera: 3
+    defensaPesada: 2
+    vision: 9
+    velocidadMovimiento: 2.6
+    alcance: 1
+    velocidadAtaque: 2
+    ataqueLigero: 7
+    ataquePesado: 0
+    velocidadCuracion: 0
+    velocidadConstruccion: 32
+  evolucionaVisual: 0
+  prefabsPorEra: []
