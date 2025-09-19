@@ -1,110 +1,178 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 
 public class SelectionHandler : MonoBehaviour
 {
     [Header("Selección con Click")]
-    [SerializeField] private LayerMask selectableMask; // Unidades, edificios, recursos
+    [SerializeField] private LayerMask selectableMask;
 
     [Header("Selección con Drag Box")]
-    [SerializeField] private RectTransform selectionBoxUI; // Imagen UI del rectángulo
+    [SerializeField] private RectTransform selectionBoxUI;
+
+    [Header("Debug")]
+    [SerializeField] private bool debugLogs = false;
+
+    private RTSInputActions inputActions;
     private Vector2 startPos;
     private Vector2 endPos;
 
     public List<Selectable> SelectedObjects { get; private set; } = new List<Selectable>();
 
     private Camera mainCamera;
+    private Canvas parentCanvas;
 
     private void Awake()
     {
         mainCamera = Camera.main;
+        inputActions = new RTSInputActions();
+
         if (selectionBoxUI != null)
-            selectionBoxUI.gameObject.SetActive(false); // 🔹 aseguramos que inicie desactivado
-    }
-
-    private void Update()
-    {
-        HandleClickSelection();
-        HandleDragSelection();
-    }
-
-    private void HandleClickSelection()
-    {
-        if (Input.GetMouseButtonDown(0))
         {
-            startPos = Input.mousePosition;
+            parentCanvas = selectionBoxUI.GetComponentInParent<Canvas>();
+            selectionBoxUI.gameObject.SetActive(false);
+        }
+    }
+
+    private void OnEnable()
+    {
+        inputActions.Enable();
+        inputActions.Gameplay.LeftClick.started += ctx => OnLeftClickDown();
+        inputActions.Gameplay.LeftClick.canceled += ctx => OnLeftClickUp();
+    }
+
+    private void OnDisable()
+    {
+        inputActions.Gameplay.LeftClick.started -= ctx => OnLeftClickDown();
+        inputActions.Gameplay.LeftClick.canceled -= ctx => OnLeftClickUp();
+        inputActions.Disable();
+    }
+
+    private void OnLeftClickDown()
+    {
+        startPos = inputActions.Gameplay.MousePos.ReadValue<Vector2>();
+        if (selectionBoxUI != null) selectionBoxUI.gameObject.SetActive(true);
+    }
+
+    private void OnLeftClickUp()
+    {
+        endPos = inputActions.Gameplay.MousePos.ReadValue<Vector2>();
+        if (selectionBoxUI != null) selectionBoxUI.gameObject.SetActive(false);
+
+        if (Vector2.Distance(endPos, startPos) < 10f)
+        {
+            HandleSingleClick(endPos);
+        }
+        else
+        {
+            HandleDragSelection();
+        }
+    }
+
+    private void HandleSingleClick(Vector2 clickPos)
+    {
+        // Si el cursor está sobre UI, ignoramos la selección del mundo.
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+        {
+            if (debugLogs) Debug.Log("Click sobre UI, ignorado.");
+            return;
         }
 
-        if (Input.GetMouseButtonUp(0))
+        Ray ray = mainCamera.ScreenPointToRay(clickPos);
+
+        // 1) Intentamos raycast usando la selectableMask (lo correcto si configuraste capas)
+        if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, selectableMask.value, QueryTriggerInteraction.Collide))
         {
-            // 🔹 Usar tolerancia, porque Input.mousePosition nunca es exactamente igual
-            if (Vector2.Distance(Input.mousePosition, startPos) < 5f)
+            Selectable selectable = hit.collider.GetComponentInParent<Selectable>();
+            if (selectable != null)
             {
-                Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-                if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, selectableMask))
-                {
-                    Selectable selectable = hit.collider.GetComponentInParent<Selectable>();
-                    if (selectable != null)
-                    {
-                        ClearSelection();
-                        AddToSelection(selectable);
-                    }
-                }
-                else
-                {
-                    ClearSelection();
-                }
+                if (debugLogs) Debug.Log($"Raycast (mask) hit: {hit.collider.name} -> seleccionando {selectable.name}");
+                ClearSelection();
+                AddToSelection(selectable);
+                return;
             }
         }
+
+        // 2) Fallback robusto: raycast all en todas las capas y buscar el Selectable más cercano
+        RaycastHit[] hits = Physics.RaycastAll(ray, Mathf.Infinity, ~0, QueryTriggerInteraction.Collide);
+        float closestDist = Mathf.Infinity;
+        Selectable closestSelectable = null;
+
+        foreach (var h in hits)
+        {
+            var s = h.collider.GetComponentInParent<Selectable>();
+            if (s != null && h.distance < closestDist)
+            {
+                closestDist = h.distance;
+                closestSelectable = s;
+            }
+        }
+
+        if (closestSelectable != null)
+        {
+            if (debugLogs) Debug.Log($"RaycastAll found selectable: {closestSelectable.name} (dist {closestDist})");
+            ClearSelection();
+            AddToSelection(closestSelectable);
+            return;
+        }
+
+        // 3) Si no hay nada: deseleccionar (click en terreno vacío)
+        if (debugLogs) Debug.Log("Click en vacío -> ClearSelection()");
+        ClearSelection();
     }
 
     private void HandleDragSelection()
     {
-        if (Input.GetMouseButtonDown(0))
+        Vector2 min = Vector2.Min(startPos, endPos);
+        Vector2 max = Vector2.Max(startPos, endPos);
+
+        ClearSelection();
+
+        foreach (var selectable in Object.FindObjectsByType<Selectable>(FindObjectsSortMode.None))
         {
-            startPos = Input.mousePosition;
-            if (selectionBoxUI != null)
-                selectionBoxUI.gameObject.SetActive(true);
-        }
+            Vector3 screenPos = mainCamera.WorldToScreenPoint(selectable.transform.position);
 
-        if (Input.GetMouseButton(0))
-        {
-            endPos = Input.mousePosition;
-            UpdateSelectionBox();
-        }
-
-        if (Input.GetMouseButtonUp(0))
-        {
-            if (selectionBoxUI != null)
-                selectionBoxUI.gameObject.SetActive(false);
-
-            Vector2 min = Vector2.Min(startPos, endPos);
-            Vector2 max = Vector2.Max(startPos, endPos);
-
-            foreach (var selectable in Object.FindObjectsByType<Selectable>(FindObjectsSortMode.None))
+            if (screenPos.z > 0 &&
+                screenPos.x >= min.x && screenPos.x <= max.x &&
+                screenPos.y >= min.y && screenPos.y <= max.y)
             {
-                Vector3 screenPos = mainCamera.WorldToScreenPoint(selectable.transform.position);
-
-                if (screenPos.z > 0 && // 🔹 evitar seleccionar cosas detrás de la cámara
-                    screenPos.x >= min.x && screenPos.x <= max.x &&
-                    screenPos.y >= min.y && screenPos.y <= max.y)
-                {
-                    AddToSelection(selectable);
-                }
+                AddToSelection(selectable);
             }
+        }
+    }
+
+    private void Update()
+    {
+        if (inputActions.Gameplay.LeftClick.IsPressed())
+        {
+            endPos = inputActions.Gameplay.MousePos.ReadValue<Vector2>();
+            UpdateSelectionBox();
         }
     }
 
     private void UpdateSelectionBox()
     {
-        Vector2 boxStart = startPos;
-        Vector2 boxEnd = endPos;
-        Vector2 boxCenter = (boxStart + boxEnd) / 2;
+        if (selectionBoxUI == null || parentCanvas == null) return;
 
-        selectionBoxUI.anchoredPosition = boxCenter;
+        Vector2 localStart, localEnd;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            parentCanvas.transform as RectTransform, startPos,
+            parentCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : parentCanvas.worldCamera,
+            out localStart);
 
-        Vector2 boxSize = new Vector2(Mathf.Abs(boxStart.x - boxEnd.x), Mathf.Abs(boxStart.y - boxEnd.y));
-        selectionBoxUI.sizeDelta = boxSize;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            parentCanvas.transform as RectTransform, endPos,
+            parentCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : parentCanvas.worldCamera,
+            out localEnd);
+
+        Vector2 min = Vector2.Min(localStart, localEnd);
+        Vector2 max = Vector2.Max(localStart, localEnd);
+        Vector2 size = max - min;
+
+        // suponiendo pivot (0,0) -> esquina inferior izquierda
+        selectionBoxUI.anchoredPosition = min;
+        selectionBoxUI.sizeDelta = size;
     }
 
     private void AddToSelection(Selectable selectable)

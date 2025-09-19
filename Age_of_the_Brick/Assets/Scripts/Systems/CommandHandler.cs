@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem; // 👈 Necesario para el nuevo Input System
 
 public class CommandHandler : MonoBehaviour
 {
@@ -16,7 +17,8 @@ public class CommandHandler : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetMouseButtonDown(1))
+        // 👇 Nueva forma de detectar click derecho
+        if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
         {
             HandleCommand();
         }
@@ -24,7 +26,8 @@ public class CommandHandler : MonoBehaviour
 
     private void HandleCommand()
     {
-        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+        Vector2 mousePos = Mouse.current.position.ReadValue(); // 👈 Nueva forma de leer posición del mouse
+        Ray ray = mainCamera.ScreenPointToRay(mousePos);
 
         // 🔹 Click en un objeto seleccionable (enemigo, recurso, edificio, etc.)
         if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, targetMask))
@@ -45,7 +48,7 @@ public class CommandHandler : MonoBehaviour
                             }
                             else
                             {
-                                // 🔹 aquí luego se puede expandir a recolectar, reparar, etc.
+                                // 🔹 Aquí luego se puede expandir a recolectar, reparar, etc.
                                 //unit.InteractWith(target);
                             }
                         }
