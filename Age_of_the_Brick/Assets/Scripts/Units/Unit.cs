@@ -5,7 +5,7 @@ using System.Collections;
 public class Unit : Selectable
 {
     [Header("Config")]
-    public UnitStats stats;            // ScriptableObject (tiene statsPorEra[], evolucionaVisual, prefabsPorEra)
+    public UnitStats stats; // ScriptableObject (tiene statsPorEra[], evolucionaVisual, prefabsPorEra)
 
     private EraStats currentStats;
     private Animator animator;
@@ -15,12 +15,12 @@ public class Unit : Selectable
     public float currentHealth;
 
     // Owner del objeto (jugador que posee la unidad)
-    public Player Owner { get; private set; }
+    private Player Owner;
     private Renderer rend;
 
     // Combate
     private bool isAttacking = false;
-    private Selectable currentTarget;   // ahora puede ser recurso, enemigo o edificio
+    private Selectable currentTarget;
     private Unit attackTarget;
 
     private void Awake()
@@ -32,11 +32,15 @@ public class Unit : Selectable
 
     private void Start()
     {
-        if (Owner != null)
-            SubscribeToOwner();
-
-        if (Owner != null)
-            UpdateStats(Owner.CurrentEra);
+        // 👇 Si no se ha inicializado explícitamente, buscar el Player usando ownerPlayerId
+        if (Owner == null && PlayerManager.Instance != null)
+        {
+            Player possibleOwner = PlayerManager.Instance.GetPlayer(ownerPlayerId);
+            if (possibleOwner != null)
+            {
+                Initialize(possibleOwner);
+            }
+        }
     }
 
     private void OnDestroy()
@@ -50,6 +54,7 @@ public class Unit : Selectable
     public void Initialize(Player owner)
     {
         Owner = owner;
+        ownerPlayerId = owner.playerId; // 👈 sincroniza el ID con el Player asignado
         SubscribeToOwner();
 
         UpdateStats(owner.CurrentEra);
@@ -120,12 +125,12 @@ public class Unit : Selectable
 
     public void InheritFrom(Unit oldUnit, int era)
     {
-        this.currentHealth = Mathf.Min(oldUnit.currentHealth, stats.statsPorEra[era].vida);
+        currentHealth = Mathf.Min(oldUnit.currentHealth, stats.statsPorEra[era].vida);
         UpdateStats(era);
 
         if (oldUnit.attackTarget != null)
         {
-            this.attackTarget = oldUnit.attackTarget;
+            attackTarget = oldUnit.attackTarget;
             if (oldUnit.isAttacking)
                 StartCoroutine(AttackRoutine());
         }
