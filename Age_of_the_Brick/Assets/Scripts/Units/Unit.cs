@@ -140,6 +140,31 @@ public class Unit : Selectable
     }
 
     // -----------------------
+    // Manejo update
+    // -----------------------
+    private void Update()
+    {
+        if (agent == null || agent.pathPending) return;
+
+        // Magnitud de velocidad (cuán rápido se está moviendo)
+        float speed = agent.velocity.magnitude;
+
+        // 🔧 Actualiza el parámetro "isMoving" según si hay velocidad
+        if (speed > 0.01f) // se está moviendo
+        {
+            PlayWalkAnimation();
+        }
+        else
+        {
+            PlayIdleAnimation();
+        }
+    }
+
+
+
+
+
+    // -----------------------
     // Animaciones comunes
     // -----------------------
     public void PlayIdleAnimation()
