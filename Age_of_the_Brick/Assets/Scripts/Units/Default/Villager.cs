@@ -11,7 +11,6 @@ public class Villager : Unit
 
     private void Start()
     {
-        base.Initialize(Owner);
         OcultarTodasLasHerramientas();
     }
 
