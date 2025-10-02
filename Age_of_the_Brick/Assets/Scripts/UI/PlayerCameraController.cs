@@ -8,6 +8,11 @@ public class PlayerCameraController : MonoBehaviour
     public float edgeScrollSpeed = 15f;
     public float edgeSize = 20f; // en píxeles, tamaño del borde para mover cámara
 
+    [Header("Zoom")]
+    public float zoomSpeed = 10f;
+    public float minZoom = 10f; // mínima altura de cámara
+    public float maxZoom = 50f; // máxima altura de cámara
+
     private Camera cam;
 
     private void Awake()
@@ -18,6 +23,7 @@ public class PlayerCameraController : MonoBehaviour
     void Update()
     {
         HandleMovement();
+        HandleZoom();
     }
 
     private void HandleMovement()
@@ -62,4 +68,21 @@ public class PlayerCameraController : MonoBehaviour
         transform.Translate(moveDir * moveSpeed * Time.deltaTime, Space.World);
     }
 
+    private void HandleZoom()
+    {
+        float scroll = Mouse.current.scroll.ReadValue().y; // positivo hacia arriba, negativo hacia abajo
+
+        if (Mathf.Abs(scroll) > 0.01f)
+        {
+            // Opción 1: mover cámara en su forward (útil para RTS con ángulo)
+            Vector3 zoomDirection = cam.transform.forward;
+            zoomDirection.y = 0; // opcional: si quieres zoom horizontal sin cambiar altura
+
+            // Si prefieres cambiar altura directamente (más común en RTS):
+            float newHeight = Mathf.Clamp(transform.position.y - scroll * zoomSpeed * Time.deltaTime, minZoom, maxZoom);
+            Vector3 pos = transform.position;
+            pos.y = newHeight;
+            transform.position = pos;
+        }
+    }
 }

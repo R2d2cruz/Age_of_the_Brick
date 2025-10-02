@@ -13,6 +13,16 @@ public class Villager : Unit
     {
         OcultarTodasLasHerramientas();
     }
+    public override void PlayIdleAnimation()
+    {
+        base.PlayIdleAnimation();
+    }
+
+    protected override void PlayAttackAnimation()
+    {
+        MostrarHerramienta(axe);
+        base.PlayAttackAnimation();
+    }
 
     // -------------------------
     // ACCIONES ESPECÍFICAS DEL ALDEANO

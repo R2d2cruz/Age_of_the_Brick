@@ -4,18 +4,25 @@ public class Selectable : MonoBehaviour
 {
     [Header("Ownership")]
     [Tooltip("0 = Neutral/independiente, >0 = jugador dueño")]
-    public int ownerPlayerId;  
+    public int ownerPlayerId;
 
     [Header("Selection Visuals")]
     [Tooltip("Círculo u objeto que aparece al seleccionar")]
-    public GameObject selectionCircle; 
+    public GameObject selectionCircle;
+
+    [Header("Meshes a recolorear")]
+    [Tooltip("Meshes de esta unidad que cambiarán según el jugador dueño")]
+    public Renderer[] meshesToRecolor;
 
     private bool isSelected;
 
-    private void Awake()
+    protected virtual void Awake()
     {
         if (selectionCircle != null)
             selectionCircle.SetActive(false);
+
+        // 👇 importante: aplicar color inicial
+        ApplyOwnerMaterial();
     }
 
     // --------------------
@@ -35,7 +42,6 @@ public class Selectable : MonoBehaviour
             selectionCircle.SetActive(false);
     }
 
-    // En caso de que quieras saber desde fuera si sigue seleccionado
     public bool IsSelected => isSelected;
 
     // --------------------
@@ -50,4 +56,30 @@ public class Selectable : MonoBehaviour
     {
         return ownerPlayerId != 0 && ownerPlayerId != playerId;
     }
+
+    // --------------------
+    // Cambio de dueño / Color
+    // --------------------
+    public void SetOwner(int newOwnerId)
+    {
+        ownerPlayerId = newOwnerId;
+        ApplyOwnerMaterial();
+    }
+
+    private void ApplyOwnerMaterial()
+    {
+        if (meshesToRecolor == null || meshesToRecolor.Length == 0)
+            return;
+
+        Material playerMaterial = PlayerManager.Instance.GetPlayerMaterial(ownerPlayerId);
+
+        foreach (var mesh in meshesToRecolor)
+        {
+            if (mesh != null)
+            {
+                mesh.material = playerMaterial;
+            }
+        }
+    }
+
 }

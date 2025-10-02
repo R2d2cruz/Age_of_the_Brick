@@ -7,7 +7,7 @@ public class Unit : Selectable
     [Header("Config")]
     public UnitStats stats; // ScriptableObject (tiene statsPorEra[], evolucionaVisual, prefabsPorEra)
 
-    private EraStats currentStats;
+    public EraStats currentStats;
     private Animator animator;
     private NavMeshAgent agent;
 
@@ -23,15 +23,13 @@ public class Unit : Selectable
     private Selectable currentTarget;
     private Unit attackTarget;
 
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         animator = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
         rend = GetComponent<Renderer>();
-    }
 
-    private void Start()
-    {
         // 👇 Si no se ha inicializado explícitamente, buscar el Player usando ownerPlayerId
         if (Owner == null && PlayerManager.Instance != null)
         {
@@ -56,7 +54,6 @@ public class Unit : Selectable
         Owner = owner;
         ownerPlayerId = owner.playerId; // 👈 sincroniza el ID con el Player asignado
         SubscribeToOwner();
-
         UpdateStats(owner.CurrentEra);
 
         if (currentHealth <= 0)
@@ -150,7 +147,7 @@ public class Unit : Selectable
         float speed = agent.velocity.magnitude;
 
         // 🔧 Actualiza el parámetro "isMoving" según si hay velocidad
-        if (speed > 0.01f) // se está moviendo
+        if (speed > 0.1f) // se está moviendo
         {
             PlayWalkAnimation();
         }
@@ -167,12 +164,12 @@ public class Unit : Selectable
     // -----------------------
     // Animaciones comunes
     // -----------------------
-    public void PlayIdleAnimation()
+    public virtual void PlayIdleAnimation()
     {
         if (animator != null)
         {
             animator.SetBool("isMoving", false);
-            animator.ResetTrigger("attack");
+            //animator.ResetTrigger("attack");
         }
     }
 
@@ -182,10 +179,13 @@ public class Unit : Selectable
             animator.SetBool("isMoving", true);
     }
 
-    public void PlayAttackAnimation()
+    protected virtual void PlayAttackAnimation()
     {
         if (animator != null)
-            animator.SetTrigger("attack");
+        {
+            animator.SetBool("attack", true);
+            animator.SetBool("isMoving", false); // por si estaba caminando
+        }
     }
 
     // -----------------------
@@ -261,7 +261,7 @@ public class Unit : Selectable
             if (dist <= currentStats.alcance)
             {
                 agent.isStopped = true;
-                PlayIdleAnimation();
+                //PlayIdleAnimation();
 
                 Vector3 lookDir = attackTarget.transform.position - transform.position;
                 lookDir.y = 0;
@@ -280,6 +280,20 @@ public class Unit : Selectable
             }
 
             yield return null;
+        }
+
+        // 👇 Cuando el objetivo muere o ya no es válido
+        attackTarget = null;
+        isAttacking = false;
+
+        agent.isStopped = true;
+
+
+        // 🔧 Resetea la animación de ataque
+        if (animator != null)
+        {
+            animator.SetBool("attack", false);
+            animator.SetBool("isMoving", false);
         }
     }
 
