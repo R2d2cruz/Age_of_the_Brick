@@ -176,7 +176,10 @@ public class Unit : Selectable
     public void PlayWalkAnimation()
     {
         if (animator != null)
-            animator.SetBool("isMoving", true);
+        {
+            animator.SetBool("attack", false);
+            animator.SetBool("isMoving", true); // por si estaba caminando
+        }
     }
 
     protected virtual void PlayAttackAnimation()
@@ -258,7 +261,7 @@ public class Unit : Selectable
         {
             float dist = Vector3.Distance(transform.position, attackTarget.transform.position);
 
-            if (dist <= currentStats.alcance)
+            if (dist <= currentStats.alcance || dist <= 2)
             {
                 agent.isStopped = true;
                 //PlayIdleAnimation();
