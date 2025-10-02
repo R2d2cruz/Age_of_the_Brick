@@ -264,7 +264,6 @@ public class Unit : Selectable
             if (dist <= currentStats.alcance || dist <= 2)
             {
                 agent.isStopped = true;
-                //PlayIdleAnimation();
 
                 Vector3 lookDir = attackTarget.transform.position - transform.position;
                 lookDir.y = 0;
@@ -315,11 +314,13 @@ public class Unit : Selectable
     // -----------------------
     public virtual void OnAttackHit()
     {
+        Debug.Log("OnAttackHit");
         if (attackTarget == null) return;
 
         float dist = Vector3.Distance(transform.position, attackTarget.transform.position);
-        if (dist > currentStats.alcance) return;
-
+        Debug.Log("OnDistance");
+        if (dist > currentStats.alcance && dist > 2) return;
+        Debug.Log("OnDamage");
         attackTarget.TakeDamage(currentStats.ataqueLigero, currentStats.ataquePesado);
     }
 
