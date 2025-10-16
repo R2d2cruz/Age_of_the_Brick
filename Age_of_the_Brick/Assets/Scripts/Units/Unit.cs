@@ -45,7 +45,7 @@ public class Unit : Selectable
     {
         UnsubscribeFromOwner();
         if (Owner != null)
-            Owner.UnregisterUnit(this);
+            Owner.Registry.UnregisterUnit(this);
     }
 
     // -----------------------
@@ -62,7 +62,7 @@ public class Unit : Selectable
             currentHealth = currentStats.vida;
 
         // 👇 Registrarse en el jugador
-        owner.RegisterUnit(this);
+        owner.Registry.RegisterUnit(this);
     }
 
     private void SubscribeToOwner()

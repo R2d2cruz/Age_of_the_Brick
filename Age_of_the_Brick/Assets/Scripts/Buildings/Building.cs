@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class Building : MonoBehaviour
+public class Building : Selectable
 {
     [Header("Config")]
     public BuildingStats stats;
@@ -22,7 +22,7 @@ public class Building : MonoBehaviour
         Owner = owner;
         UpdateStats(owner.CurrentEra);
         if (currentHealth <= 0) currentHealth = currentStats.vida;
-        owner.RegisterBuilding(this);
+        owner.Registry.RegisterBuilding(this);
     }
 
     public void UpdateStats(int era)
@@ -66,6 +66,6 @@ public class Building : MonoBehaviour
     private void OnDestroy()
     {
         if (Owner != null)
-            Owner.UnregisterBuilding(this);
+            Owner.Registry.UnregisterBuilding(this);
     }
 }

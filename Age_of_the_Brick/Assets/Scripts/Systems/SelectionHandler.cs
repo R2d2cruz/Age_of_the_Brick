@@ -42,7 +42,7 @@ public class SelectionHandler : MonoBehaviour
     {
         localPlayer = PlayerManager.Instance.GetPlayer(localPlayerId);
     }
-    
+
     public void SetLocalPlayer(int newPlayerId)
     {
         localPlayerId = newPlayerId;
@@ -139,32 +139,26 @@ public class SelectionHandler : MonoBehaviour
 
     private void HandleDragSelection()
     {
+        if (localPlayer == null)
+            return;
+
         Vector2 min = Vector2.Min(startPos, endPos);
         Vector2 max = Vector2.Max(startPos, endPos);
 
         ClearSelection();
 
-        if (localPlayer == null)
-            return;
+        List<Unit> units = localPlayer.Registry.GetUnitsInScreenRect(mainCamera, min, max);
 
-        foreach (var unit in localPlayer.GetOwnedUnits())
-        {
-            if (unit == null)
-                continue;
-
-            Vector3 screenPos = mainCamera.WorldToScreenPoint(unit.transform.position);
-
-            if (screenPos.z > 0 &&
-                screenPos.x >= min.x && screenPos.x <= max.x &&
-                screenPos.y >= min.y && screenPos.y <= max.y)
-            {
-                AddToSelection(unit);
-            }
-        }
+        foreach (var unit in units)
+            AddToSelection(unit);
     }
+
 
     private void Update()
     {
+        if (localPlayer != null)
+            localPlayer.Update(Time.deltaTime);
+
         if (inputActions.Gameplay.LeftClick.IsPressed())
         {
             endPos = inputActions.Gameplay.MousePos.ReadValue<Vector2>();

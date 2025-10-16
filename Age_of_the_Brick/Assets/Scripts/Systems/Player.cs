@@ -1,7 +1,5 @@
 using System;
 using UnityEngine;
-using System.Collections.Generic;
-
 public class Player
 {
     public int playerId;
@@ -12,9 +10,8 @@ public class Player
     private int currentEra = 0;
     public int CurrentEra => currentEra;
 
-    // ✅ Listas de objetos poseídos
-    private readonly List<Unit> ownedUnits = new List<Unit>();
-    private readonly List<Building> ownedBuildings = new List<Building>();
+    // ✅ Registro de objetos poseídos
+    public UnitRegistry Registry { get; private set; } = new UnitRegistry();
 
     // Evento que notifica la nueva era (solo para las unidades/estructuras de este jugador)
     public event Action<int> OnEraChanged;
@@ -28,34 +25,15 @@ public class Player
     }
 
     // --- Gestión de unidades ---
-    public void RegisterUnit(Unit unit)
+    public void RegisterUnit(Unit unit) => Registry.RegisterUnit(unit);
+    public void UnregisterUnit(Unit unit) => Registry.UnregisterUnit(unit);
+    public void RegisterBuilding(Building b) => Registry.RegisterBuilding(b);
+    public void UnregisterBuilding(Building b) => Registry.UnregisterBuilding(b);
+
+    public void Update(float deltaTime)
     {
-        if (unit != null && !ownedUnits.Contains(unit))
-            ownedUnits.Add(unit);
+        Registry.UpdateCache(deltaTime);
     }
-
-    public void UnregisterUnit(Unit unit)
-    {
-        if (unit != null)
-            ownedUnits.Remove(unit);
-    }
-
-    public List<Unit> GetOwnedUnits() => ownedUnits;
-
-    // --- Gestión de edificios ---
-    public void RegisterBuilding(Building building)
-    {
-        if (building != null && !ownedBuildings.Contains(building))
-            ownedBuildings.Add(building);
-    }
-
-    public void UnregisterBuilding(Building building)
-    {
-        if (building != null)
-            ownedBuildings.Remove(building);
-    }
-
-    public List<Building> GetOwnedBuildings() => ownedBuildings;
 
     // --- Eras ---
     public void AdvanceEra()
