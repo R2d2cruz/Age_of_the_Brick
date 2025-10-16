@@ -44,6 +44,8 @@ public class Unit : Selectable
     private void OnDestroy()
     {
         UnsubscribeFromOwner();
+        if (Owner != null)
+            Owner.UnregisterUnit(this);
     }
 
     // -----------------------
@@ -58,6 +60,9 @@ public class Unit : Selectable
 
         if (currentHealth <= 0)
             currentHealth = currentStats.vida;
+
+        // 👇 Registrarse en el jugador
+        owner.RegisterUnit(this);
     }
 
     private void SubscribeToOwner()
@@ -342,4 +347,5 @@ public class Unit : Selectable
         if (agent != null) agent.isStopped = true;
         Destroy(gameObject, 3f);
     }
+
 }

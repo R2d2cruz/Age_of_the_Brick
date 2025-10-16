@@ -22,6 +22,9 @@ public class SelectionHandler : MonoBehaviour
 
     private Camera mainCamera;
     private Canvas parentCanvas;
+    [SerializeField] private int localPlayerId = 1; // 🔹 el jugador actual
+
+    private Player localPlayer;
 
     private void Awake()
     {
@@ -34,6 +37,18 @@ public class SelectionHandler : MonoBehaviour
             selectionBoxUI.gameObject.SetActive(false);
         }
     }
+
+    private void Start()
+    {
+        localPlayer = PlayerManager.Instance.GetPlayer(localPlayerId);
+    }
+    
+    public void SetLocalPlayer(int newPlayerId)
+    {
+        localPlayerId = newPlayerId;
+        localPlayer = PlayerManager.Instance.GetPlayer(localPlayerId);
+    }
+
 
     private void OnEnable()
     {
@@ -129,15 +144,21 @@ public class SelectionHandler : MonoBehaviour
 
         ClearSelection();
 
-        foreach (var selectable in Object.FindObjectsByType<Selectable>(FindObjectsSortMode.None))
+        if (localPlayer == null)
+            return;
+
+        foreach (var unit in localPlayer.GetOwnedUnits())
         {
-            Vector3 screenPos = mainCamera.WorldToScreenPoint(selectable.transform.position);
+            if (unit == null)
+                continue;
+
+            Vector3 screenPos = mainCamera.WorldToScreenPoint(unit.transform.position);
 
             if (screenPos.z > 0 &&
                 screenPos.x >= min.x && screenPos.x <= max.x &&
                 screenPos.y >= min.y && screenPos.y <= max.y)
             {
-                AddToSelection(selectable);
+                AddToSelection(unit);
             }
         }
     }

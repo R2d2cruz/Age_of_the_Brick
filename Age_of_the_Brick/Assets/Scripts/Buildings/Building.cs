@@ -22,6 +22,7 @@ public class Building : MonoBehaviour
         Owner = owner;
         UpdateStats(owner.CurrentEra);
         if (currentHealth <= 0) currentHealth = currentStats.vida;
+        owner.RegisterBuilding(this);
     }
 
     public void UpdateStats(int era)
@@ -60,5 +61,11 @@ public class Building : MonoBehaviour
             construction.Destruir();
         else
             Destroy(gameObject);
+    }
+
+    private void OnDestroy()
+    {
+        if (Owner != null)
+            Owner.UnregisterBuilding(this);
     }
 }
