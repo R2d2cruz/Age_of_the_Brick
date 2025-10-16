@@ -23,9 +23,9 @@ public class Unit : Selectable
     private Selectable currentTarget;
     private Unit attackTarget;
 
-    protected override void Awake()
+    protected override void Start()
     {
-        base.Awake();
+        base.Start();
         animator = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
         rend = GetComponent<Renderer>();

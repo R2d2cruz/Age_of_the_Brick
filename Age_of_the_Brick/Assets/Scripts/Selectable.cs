@@ -16,7 +16,7 @@ public class Selectable : MonoBehaviour
 
     private bool isSelected;
 
-    protected virtual void Awake()
+    protected virtual void Start()
     {
         if (selectionCircle != null)
             selectionCircle.SetActive(false);

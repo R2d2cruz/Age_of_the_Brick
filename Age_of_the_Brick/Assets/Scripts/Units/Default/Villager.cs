@@ -9,8 +9,9 @@ public class Villager : Unit
     [SerializeField] private GameObject dot;
     [SerializeField] private GameObject fishingRod;
 
-    private void Start()
+    protected override void Start()
     {
+        base.Start();
         OcultarTodasLasHerramientas();
     }
     public override void PlayIdleAnimation()
