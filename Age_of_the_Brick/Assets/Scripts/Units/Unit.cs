@@ -35,6 +35,13 @@ public class Unit : Selectable
     private float lastHealthChangeTime = -999f; // tiempo del último cambio de vida
     private bool isHealthVisible = false;       // estado actual de visibilidad
 
+    [Header("Health Bar Colors")]
+    [SerializeField] private Image healthFillImage;
+    [SerializeField] private Color healthyColor = Color.green;
+    [SerializeField] private Color warningColor = Color.yellow;
+    [SerializeField] private Color dangerColor = Color.red;
+
+
     // Combate
     private bool isAttacking = false;
     private Selectable currentTarget;
@@ -389,10 +396,88 @@ public class Unit : Selectable
         StartCoroutine(AttackRoutine());
     }
 
+    // 🔹 Añade esto dentro de Unit.cs (después de OnAttackHit y antes de TakeDamage)
+    private Unit FindNearestEnemy()
+    {
+        // Usa el radio de visión definido en EraStats (si no está, usa un valor por defecto)
+        float visionRadius = (currentStats != null && currentStats.vision * 2 > 0) ? currentStats.vision * 2 : 12f;
+        Collider[] hits = Physics.OverlapSphere(transform.position, visionRadius);
+
+        Debug.Log(visionRadius);
+
+        Unit nearestEnemy = null;
+        float minDist = Mathf.Infinity;
+
+        foreach (var hit in hits)
+        {
+            Unit candidate = hit.GetComponent<Unit>();
+            if (candidate == null || candidate == this) continue;
+            if (candidate.state != SelectableState.Alive) continue;
+            if (!candidate.IsEnemyTo(ownerPlayerId)) continue;
+
+            float dist = Vector3.Distance(transform.position, candidate.transform.position);
+            if (dist < minDist)
+            {
+                minDist = dist;
+                nearestEnemy = candidate;
+            }
+        }
+
+        return nearestEnemy;
+    }
+
+    private void StopAttacking()
+    {
+        isAttacking = false;
+
+        if (agent != null)
+            agent.isStopped = true;
+
+        if (animator != null)
+        {
+            animator.SetBool("attack", false);
+            animator.SetBool("isMoving", false);
+        }
+
+        attackTarget = null;
+    }
+
     private IEnumerator AttackRoutine()
     {
         while (attackTarget != null)
         {
+            // 👇 Verificar si el objetivo está muerto
+            if (attackTarget.state == SelectableState.Dead)
+            {
+                // Pequeña pausa para permitir que el estado se actualice completamente
+                yield return new WaitForSeconds(0.1f);
+
+                // Buscar nuevo objetivo automáticamente
+                Unit newTarget = FindNearestEnemy();
+
+                if (newTarget != null)
+                {
+                    attackTarget = newTarget;
+                    Debug.Log($"{name} cambió de objetivo a {newTarget.name}");
+                    continue; // sigue el bucle sin detener el ataque
+                }
+                else
+                {
+                    attackTarget = null;
+                    isAttacking = false;
+
+                    // Detener el movimiento y animaciones de ataque
+                    if (agent != null) agent.isStopped = true;
+                    if (animator != null)
+                    {
+                        animator.SetBool("attack", false);
+                        animator.SetBool("isMoving", false);
+                    }
+
+                    yield break; // salir del coroutine si no hay nuevos enemigos
+                }
+            }
+
             float dist = Vector3.Distance(transform.position, attackTarget.transform.position);
 
             if (dist <= currentStats.alcance || dist <= 2)
@@ -448,13 +533,10 @@ public class Unit : Selectable
     // -----------------------
     public virtual void OnAttackHit()
     {
-        Debug.Log("OnAttackHit");
         if (attackTarget == null) return;
 
         float dist = Vector3.Distance(transform.position, attackTarget.transform.position);
-        Debug.Log("OnDistance");
         if (dist > currentStats.alcance && dist > 2) return;
-        Debug.Log("OnDamage");
         attackTarget.TakeDamage(currentStats.ataqueLigero, currentStats.ataquePesado);
     }
 
@@ -465,12 +547,53 @@ public class Unit : Selectable
 
         currentHealth -= finalDamage;
 
-        if (currentHealth <= 0f)
-            Die();
+        // 👇 Actualiza el valor visual del slider
+        UpdateHealthUI();
+
+        if (currentHealth <= 0f && state == SelectableState.Alive)
+        {
+            state = SelectableState.Dying;
+            StartCoroutine(DyingRoutine());
+        }
     }
 
-    private void Die()
+    // 👇 Método opcional si agregas curación
+    public void Heal(float amount)
     {
+        currentHealth = Mathf.Min(currentStats.vida, currentHealth + amount);
+        UpdateHealthUI();
+    }
+    private IEnumerator DyingRoutine()
+    {
+        if (fightsAfterDeath)
+        {
+            float startTime = Time.time;
+
+            /* // Opcional: animación o efecto especial
+            if (animator != null)
+                animator.SetBool("isBerserk", true); */
+
+            while (Time.time - startTime < postDeathFightDuration)
+            {
+                // Permite seguir atacando si ya estaba en combate
+                if (isAttacking && attackTarget != null)
+                {
+                    // Evita moverse, pero puede seguir atacando
+                    agent.isStopped = true;
+                }
+
+                yield return null;
+            }
+        }
+
+        die();
+    }
+
+
+    private void die()
+    {
+        if (state == SelectableState.Dead) return; // prevenir doble muerte
+        state = SelectableState.Dead;
         // esconder UI al morir
         if (healthCanvas != null)
             healthCanvas.gameObject.SetActive(false);
@@ -478,7 +601,16 @@ public class Unit : Selectable
         StopAllCoroutines();
         if (animator != null) animator.SetTrigger("die");
         if (agent != null) agent.isStopped = true;
-        Destroy(gameObject, 3f);
+        Destroy(gameObject, 1f);
     }
 
+    private void OnDrawGizmosSelected()
+    {
+        if (currentStats != null)
+        {
+            Gizmos.color = Color.red;
+            float visionRadius = (currentStats.vision > 0) ? currentStats.vision : 12f;
+            Gizmos.DrawWireSphere(transform.position, visionRadius);
+        }
+    }
 }

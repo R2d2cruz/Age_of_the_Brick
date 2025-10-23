@@ -1,5 +1,13 @@
 using UnityEngine;
 
+public enum SelectableState
+{
+    Alive,
+    Dying,     // Vida = 0 pero aún activa
+    Dead
+}
+
+
 public class Selectable : MonoBehaviour
 {
     [Header("Ownership")]
@@ -15,6 +23,9 @@ public class Selectable : MonoBehaviour
     public Renderer[] meshesToRecolor;
 
     private bool isSelected;
+
+    public SelectableState state = SelectableState.Alive;
+
 
     protected virtual void Start()
     {
