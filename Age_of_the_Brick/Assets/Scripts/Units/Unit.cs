@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
+using UnityEngine.UI;
 
 public class Unit : Selectable
 {
@@ -18,10 +19,31 @@ public class Unit : Selectable
     private Player Owner;
     private Renderer rend;
 
+    // -------------------------
+    // Health bar UI (WORLD SPACE)
+    // -------------------------
+    [Header("Health UI (World)")]
+    [Tooltip("Canvas (World Space) que contiene el Slider")]
+    [SerializeField] private Canvas healthCanvas;
+    [SerializeField] private Slider healthSlider;
+    [SerializeField] private Vector3 healthCanvasOffset = new Vector3(0f, 4.2f, 0f); // ajustar alto sobre la unidad
+    private static Camera mainCamCached; // cache para evitar Camera.main cada frame
+
+    // 👇 Nueva sección
+    [Header("Health UI Behavior")]
+    [SerializeField] private float showHealthDuration = 3f; // segundos visible tras recibir daño
+    private float lastHealthChangeTime = -999f; // tiempo del último cambio de vida
+    private bool isHealthVisible = false;       // estado actual de visibilidad
+
     // Combate
     private bool isAttacking = false;
     private Selectable currentTarget;
     private Unit attackTarget;
+
+    [Header("Death Behavior")]
+    public bool fightsAfterDeath = false; // si puede seguir peleando tras llegar a 0
+    public float postDeathFightDuration = 2f; // segundos que sigue peleando
+
 
     protected override void Start()
     {
@@ -29,6 +51,10 @@ public class Unit : Selectable
         animator = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
         rend = GetComponent<Renderer>();
+
+        // Cache camera
+        if (mainCamCached == null)
+            mainCamCached = Camera.main;
 
         // 👇 Si no se ha inicializado explícitamente, buscar el Player usando ownerPlayerId
         if (Owner == null && PlayerManager.Instance != null)
@@ -39,6 +65,10 @@ public class Unit : Selectable
                 Initialize(possibleOwner);
             }
         }
+
+        // Ocultar la barra si la vida está completa
+        if (healthCanvas != null)
+            healthCanvas.gameObject.SetActive(false);
     }
 
     private void OnDestroy()
@@ -63,6 +93,10 @@ public class Unit : Selectable
 
         // 👇 Registrarse en el jugador
         owner.Registry.RegisterUnit(this);
+
+        // Health UI (en caso de que Initialize se llame después de Start)
+        InitHealthUI();
+        UpdateHealthUI();
     }
 
     private void SubscribeToOwner()
@@ -123,6 +157,13 @@ public class Unit : Selectable
             animator.SetFloat("moveSpeedMultiplier", currentStats.velocidadMovimiento);
             animator.SetFloat("attackSpeedMultiplier", currentStats.velocidadAtaque);
         }
+
+        // Actualizar máximos del UI
+        if (healthSlider != null)
+        {
+            healthSlider.maxValue = currentStats.vida;
+            healthSlider.value = currentHealth;
+        }
     }
 
     public void InheritFrom(Unit oldUnit, int era)
@@ -146,6 +187,10 @@ public class Unit : Selectable
     // -----------------------
     private void Update()
     {
+        // billboard health canvas y actualización del valor (si hay cambios)
+        UpdateHealthCanvasTransform();
+        UpdateHealthVisibility();
+
         if (agent == null || agent.pathPending) return;
 
         // Magnitud de velocidad (cuán rápido se está moviendo)
@@ -162,9 +207,93 @@ public class Unit : Selectable
         }
     }
 
+    // -----------------------
+    // Health UI helpers
+    // -----------------------
+    private void InitHealthUI()
+    {
+        if (healthCanvas == null || healthSlider == null) return;
+
+        if (healthCanvas.renderMode != RenderMode.WorldSpace)
+            healthCanvas.renderMode = RenderMode.WorldSpace;
+
+        healthCanvas.transform.SetParent(transform, false);
+        healthCanvas.transform.localPosition = healthCanvasOffset;
+
+        healthSlider.minValue = 0f;
+        healthSlider.maxValue = (currentStats != null) ? currentStats.vida : 1f;
+        healthSlider.value = currentHealth;
+
+        UpdateHealthBarColor();
+
+        healthCanvas.gameObject.SetActive(false);
+    }
+
+    private void UpdateHealthUI()
+    {
+        if (healthSlider == null) return;
+
+        healthSlider.value = Mathf.Clamp(currentHealth, 0f, (currentStats != null) ? currentStats.vida : currentHealth);
+
+        // Mostrar temporalmente si hay daño o curación
+        lastHealthChangeTime = Time.time;
+        SetHealthVisibility(true);
+
+        // Actualizar color visual
+        UpdateHealthBarColor();
+    }
+
+    private void UpdateHealthBarColor()
+    {
+        if (healthFillImage == null || currentStats == null) return;
+
+        float porcentaje = currentHealth / currentStats.vida;
+
+        if (porcentaje > 0.6f)
+            healthFillImage.color = healthyColor;
+        else if (porcentaje > 0.3f)
+            healthFillImage.color = warningColor;
+        else
+            healthFillImage.color = dangerColor;
+    }
 
 
+    private void UpdateHealthCanvasTransform()
+    {
+        if (healthCanvas == null) return;
 
+        // Si cache de camera no existe, intentar recuperarla
+        if (mainCamCached == null) mainCamCached = Camera.main;
+        if (mainCamCached == null) return;
+
+        // Mantener el canvas encima del unit (si quieres fijar el offset dinámicamente)
+        healthCanvas.transform.position = transform.position + healthCanvasOffset;
+
+        // Rotar para mirar a la cámara (mirar hacia la cámara)
+        Vector3 dir = mainCamCached.transform.position - healthCanvas.transform.position;
+        // si quieres que la barra también se incline según cámara, usa sin zero Y; aquí la dejamos mirando plano completo
+        healthCanvas.transform.rotation = Quaternion.LookRotation(dir.normalized);
+    }
+
+    // 👇 Nueva función de control de visibilidad
+    private void UpdateHealthVisibility()
+    {
+        if (!isHealthVisible) return;
+
+        if (Time.time - lastHealthChangeTime > showHealthDuration)
+        {
+            SetHealthVisibility(false);
+        }
+    }
+
+    private void SetHealthVisibility(bool visible)
+    {
+        if (healthCanvas != null && visible != isHealthVisible)
+        {
+            healthCanvas.gameObject.SetActive(visible);
+            isHealthVisible = visible;
+        }
+    }
 
     // -----------------------
     // Animaciones comunes
@@ -342,6 +471,10 @@ public class Unit : Selectable
 
     private void Die()
     {
+        // esconder UI al morir
+        if (healthCanvas != null)
+            healthCanvas.gameObject.SetActive(false);
+
         StopAllCoroutines();
         if (animator != null) animator.SetTrigger("die");
         if (agent != null) agent.isStopped = true;
