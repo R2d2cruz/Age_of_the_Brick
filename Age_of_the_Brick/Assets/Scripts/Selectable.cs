@@ -3,10 +3,9 @@ using UnityEngine;
 public enum SelectableState
 {
     Alive,
-    Dying,     // Vida = 0 pero aún activa
+    Dying,
     Dead
 }
-
 
 public class Selectable : MonoBehaviour
 {
@@ -22,22 +21,25 @@ public class Selectable : MonoBehaviour
     [Tooltip("Meshes de esta unidad que cambiarán según el jugador dueño")]
     public Renderer[] meshesToRecolor;
 
-    private bool isSelected;
-
+    protected bool isSelected;
     public SelectableState state = SelectableState.Alive;
 
+    private static PlayerManager cachedManager;
 
     protected virtual void Start()
     {
         if (selectionCircle != null)
             selectionCircle.SetActive(false);
 
-        // 👇 importante: aplicar color inicial
+        // Cachear PlayerManager (solo una vez)
+        if (cachedManager == null)
+            cachedManager = PlayerManager.Instance;
+
         ApplyOwnerMaterial();
     }
 
     // --------------------
-    // Selección / Deselección
+    // Selección
     // --------------------
     public void Select()
     {
@@ -82,15 +84,18 @@ public class Selectable : MonoBehaviour
         if (meshesToRecolor == null || meshesToRecolor.Length == 0)
             return;
 
-        Material playerMaterial = PlayerManager.Instance.GetPlayerMaterial(ownerPlayerId);
+        if (cachedManager == null)
+            cachedManager = PlayerManager.Instance;
+
+        if (cachedManager == null) return;
+
+        Material playerMaterial = cachedManager.GetPlayerMaterial(ownerPlayerId);
+        if (playerMaterial == null) return;
 
         foreach (var mesh in meshesToRecolor)
         {
             if (mesh != null)
-            {
                 mesh.material = playerMaterial;
-            }
         }
     }
-
 }
