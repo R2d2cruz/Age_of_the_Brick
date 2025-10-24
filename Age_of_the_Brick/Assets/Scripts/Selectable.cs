@@ -24,17 +24,23 @@ public class Selectable : MonoBehaviour
     protected bool isSelected;
     public SelectableState state = SelectableState.Alive;
 
+    // Cache estático para evitar búsquedas repetidas
     private static PlayerManager cachedManager;
+
+    // Color/material actual aplicado (evita reasignar el mismo material)
+    private Material currentMaterialApplied;
 
     protected virtual void Start()
     {
+        // Desactivar el círculo de selección al iniciar
         if (selectionCircle != null)
             selectionCircle.SetActive(false);
 
-        // Cachear PlayerManager (solo una vez)
+        // Cachear el PlayerManager (solo una vez)
         if (cachedManager == null)
             cachedManager = PlayerManager.Instance;
 
+        // Aplicar color inicial
         ApplyOwnerMaterial();
     }
 
@@ -75,6 +81,9 @@ public class Selectable : MonoBehaviour
     // --------------------
     public void SetOwner(int newOwnerId)
     {
+        if (ownerPlayerId == newOwnerId)
+            return; // Evitar reconfigurar si no cambia el dueño
+
         ownerPlayerId = newOwnerId;
         ApplyOwnerMaterial();
     }
@@ -87,10 +96,20 @@ public class Selectable : MonoBehaviour
         if (cachedManager == null)
             cachedManager = PlayerManager.Instance;
 
-        if (cachedManager == null) return;
+        if (cachedManager == null)
+        {
+            Debug.LogWarning($"[Selectable] No se encontró PlayerManager para {gameObject.name}");
+            return;
+        }
 
         Material playerMaterial = cachedManager.GetPlayerMaterial(ownerPlayerId);
         if (playerMaterial == null) return;
+
+        // Evitar reasignar el mismo material
+        if (currentMaterialApplied == playerMaterial)
+            return;
+
+        currentMaterialApplied = playerMaterial;
 
         foreach (var mesh in meshesToRecolor)
         {
