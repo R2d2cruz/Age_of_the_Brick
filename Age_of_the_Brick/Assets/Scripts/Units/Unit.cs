@@ -3,6 +3,15 @@ using UnityEngine.AI;
 using System.Collections;
 using UnityEngine.UI;
 
+public enum UnitBehaviourState
+{
+    Idle,
+    Moving,
+    Attacking,
+    Waiting
+}
+
+
 /// <summary>
 /// Clase base de las unidades en el juego.
 /// Hereda de Selectable, lo que permite interacción del jugador (selección, comandos).
@@ -72,15 +81,26 @@ public class Unit : Selectable
     public float postDeathFightDuration = 2f;   // Duración del estado “post muerte”.
 
     // ============================================================
+    // State machine
+    // ============================================================
+
+    [Header("Estados de la unidad")]
+
+    private UnitBehaviourState behaviourState = UnitBehaviourState.Idle;
+    public UnitBehaviourState BehaviourState => behaviourState;
+
+
+    // ============================================================
     // MÉTODOS DE CICLO DE VIDA
     // ============================================================
 
     protected override void Start()
     {
         base.Start();
-        animator = GetComponent<Animator>();
-        agent = GetComponent<NavMeshAgent>();
-        rend = GetComponent<Renderer>();
+
+        TryGetComponent(out animator);
+        TryGetComponent(out agent);
+        TryGetComponent(out rend);
 
         // Cache de cámara
         if (mainCamCached == null)
@@ -95,15 +115,13 @@ public class Unit : Selectable
         }
 
         // Ocultar barra de vida al inicio si está llena
-        if (healthCanvas != null)
-            healthCanvas.gameObject.SetActive(false);
+        healthCanvas?.gameObject.SetActive(false);
     }
 
     private void OnDestroy()
     {
         UnsubscribeFromOwner();
-        if (Owner != null)
-            Owner.Registry.UnregisterUnit(this);
+        Owner?.Registry.UnregisterUnit(this);
     }
 
     // ============================================================
@@ -219,25 +237,53 @@ public class Unit : Selectable
     }
 
     // ============================================================
-    // UPDATE GENERAL
+    // UPDATE
     // ============================================================
 
     private void Update()
     {
+        if (state == SelectableState.Dead) return; // ya no hace nada si está muerta
+
         UpdateHealthCanvasTransform();
         UpdateHealthVisibility();
 
         if (agent == null || agent.pathPending) return;
 
-        float speed = agent.velocity.magnitude;
-        if (speed > 0.1f)
-            PlayWalkAnimation();
-        else
-            PlayIdleAnimation();
+        float speed = agent.velocity.sqrMagnitude;
+
+        if (speed > 0.01f && behaviourState != UnitBehaviourState.Moving && !isAttacking)
+            SetBehaviourState(UnitBehaviourState.Moving);
+        else if (speed <= 0.01f && !isAttacking && behaviourState != UnitBehaviourState.Idle)
+            SetBehaviourState(UnitBehaviourState.Idle);
     }
 
     // ============================================================
-    // UI DE VIDA Y COLOR DINÁMICO
+    // State Machine
+    // ============================================================
+
+    private void SetBehaviourState(UnitBehaviourState newState)
+    {
+        if (behaviourState == newState) return;
+
+        behaviourState = newState;
+
+        switch (newState)
+        {
+            case UnitBehaviourState.Idle:
+                PlayIdleAnimation();
+                break;
+            case UnitBehaviourState.Moving:
+                PlayWalkAnimation();
+                break;
+            case UnitBehaviourState.Attacking:
+                PlayAttackAnimation();
+                break;
+        }
+    }
+
+
+    // ============================================================
+    // UI DE VIDA
     // ============================================================
 
     private void InitHealthUI()
@@ -283,13 +329,10 @@ public class Unit : Selectable
 
     private void UpdateHealthCanvasTransform()
     {
-        if (healthCanvas == null) return;
-        if (mainCamCached == null) mainCamCached = Camera.main;
-        if (mainCamCached == null) return;
+        if (healthCanvas == null || mainCamCached == null) return;
 
         healthCanvas.transform.position = transform.position + healthCanvasOffset;
-        Vector3 dir = mainCamCached.transform.position - healthCanvas.transform.position;
-        healthCanvas.transform.rotation = Quaternion.LookRotation(dir.normalized);
+        healthCanvas.transform.rotation = Quaternion.LookRotation(mainCamCached.transform.forward);
     }
 
     private void UpdateHealthVisibility()
@@ -314,10 +357,7 @@ public class Unit : Selectable
 
     public virtual void PlayIdleAnimation()
     {
-        if (animator != null)
-        {
-            animator.SetBool("isMoving", false);
-        }
+        animator?.SetBool("isMoving", false);
     }
 
     public void PlayWalkAnimation()
@@ -349,8 +389,17 @@ public class Unit : Selectable
     }
 
     // ============================================================
-    // ACCIONES (Movimiento y Objetivos)
+    // MOVIMIENTO Y COMBATE
     // ============================================================
+
+    public void Wait()
+    {
+        StopAllCoroutines();
+        attackTarget = null;
+        isAttacking = false;
+        if (agent != null) agent.isStopped = true;
+        SetBehaviourState(UnitBehaviourState.Idle);
+    }
 
     public void MoveTo(Vector3 destination)
     {
@@ -365,7 +414,7 @@ public class Unit : Selectable
             agent.SetDestination(destination);
         }
 
-        PlayWalkAnimation();
+        SetBehaviourState(UnitBehaviourState.Moving);
     }
 
     public void SetTarget(Selectable target)
@@ -438,6 +487,7 @@ public class Unit : Selectable
     private void StopAttacking()
     {
         isAttacking = false;
+        attackTarget = null;
 
         if (agent != null)
             agent.isStopped = true;
@@ -447,8 +497,6 @@ public class Unit : Selectable
             animator.SetBool("attack", false);
             animator.SetBool("isMoving", false);
         }
-
-        attackTarget = null;
     }
 
     /// <summary>
@@ -468,7 +516,6 @@ public class Unit : Selectable
                 if (newTarget != null)
                 {
                     attackTarget = newTarget;
-                    Debug.Log($"{name} cambió de objetivo a {newTarget.name}");
                     continue;
                 }
                 else
@@ -489,14 +536,14 @@ public class Unit : Selectable
                 if (lookDir.sqrMagnitude > 0.001f)
                     transform.rotation = Quaternion.LookRotation(lookDir);
 
-                PlayAttackAnimation();
+                SetBehaviourState(UnitBehaviourState.Attacking);
                 yield return new WaitForSeconds(1f / currentStats.velocidadAtaque);
             }
             else
             {
                 agent.isStopped = false;
                 agent.SetDestination(attackTarget.transform.position);
-                PlayWalkAnimation();
+                SetBehaviourState(UnitBehaviourState.Moving);
             }
 
             yield return null;
@@ -505,18 +552,11 @@ public class Unit : Selectable
         StopAttacking();
     }
 
-    public void Wait()
-    {
-        StopAllCoroutines();
-        attackTarget = null;
-        isAttacking = false;
-        if (agent != null) agent.isStopped = true;
-        PlayIdleAnimation();
-    }
-
     public virtual void OnAttackHit()
     {
         if (attackTarget == null) return;
+        if (attackTarget.state == SelectableState.Dead) return;
+
         float dist = Vector3.Distance(transform.position, attackTarget.transform.position);
         if (dist > currentStats.alcance && dist > 2) return;
         attackTarget.TakeDamage(currentStats.ataqueLigero, currentStats.ataquePesado);
@@ -524,6 +564,8 @@ public class Unit : Selectable
 
     public void TakeDamage(int dmgLigero, int dmgPesado)
     {
+        if (state == SelectableState.Dead) return;
+
         int finalDamage = Mathf.Max(0, dmgLigero - currentStats.defensaLigera) +
                           Mathf.Max(0, dmgPesado - currentStats.defensaPesada);
 
@@ -547,30 +589,23 @@ public class Unit : Selectable
     {
         if (fightsAfterDeath)
         {
-            float startTime = Time.time;
-
-            while (Time.time - startTime < postDeathFightDuration)
-            {
-                if (isAttacking && attackTarget != null)
-                    agent.isStopped = true;
-                yield return null;
-            }
+            yield return new WaitForSeconds(postDeathFightDuration);
         }
-        die();
+        Die();
     }
 
-    private void die()
+    private void Die()
     {
         if (state == SelectableState.Dead) return;
 
         state = SelectableState.Dead;
-        if (healthCanvas != null)
-            healthCanvas.gameObject.SetActive(false);
+        isAttacking = false;
+        healthCanvas?.gameObject.SetActive(false);
 
         StopAllCoroutines();
-        if (animator != null) animator.SetTrigger("die");
-        if (agent != null) agent.isStopped = true;
-        Destroy(gameObject, 1f);
+        animator?.SetTrigger("die");
+
+        Destroy(gameObject, 3f);
     }
 
     private void OnDrawGizmosSelected()
