@@ -22,6 +22,8 @@ public class Selectable : MonoBehaviour
     public Renderer[] meshesToRecolor;
 
     protected bool isSelected;
+    
+    [Header("Estado general")]
     public SelectableState state = SelectableState.Alive;
 
     // Cache estático para evitar búsquedas repetidas
