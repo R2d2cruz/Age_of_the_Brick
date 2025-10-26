@@ -278,7 +278,7 @@ public class Unit : Selectable
         }
     }
 
-    private void ChangeState(UnitState newState)
+    protected void ChangeState(UnitState newState)
     {
         // Exit estado anterior
         currentState?.Exit();
@@ -577,7 +577,7 @@ public class Unit : Selectable
     // === Unit State classes (internas, acceden a 'this' unidad)
     // ============================================================
 
-    private abstract class UnitState
+    protected abstract class UnitState
     {
         protected Unit unit;
         public UnitState(Unit u) { unit = u; }
@@ -603,7 +603,7 @@ public class Unit : Selectable
         public override UnitBehaviourState GetBehaviourState() => UnitBehaviourState.Idle;
     }
 
-    private class MovingState : UnitState
+    protected class MovingState : UnitState
     {
         private Vector3 destination;
         public MovingState(Unit u, Vector3 dest) : base(u) { destination = dest; }
@@ -651,7 +651,7 @@ public class Unit : Selectable
         public override UnitBehaviourState GetBehaviourState() => UnitBehaviourState.Moving;
     }
 
-    private class AttackingState : UnitState
+    protected class AttackingState : UnitState
     {
         private float attackCooldown = 0;
         public AttackingState(Unit u) : base(u) { }
