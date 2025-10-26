@@ -251,17 +251,6 @@ public class Unit : Selectable
 
         // Tick del estado actual (si existe)
         currentState?.Tick();
-
-        // Si el agente está moviéndose, actualizamos el behaviourState de manera conservadora
-        if (agent != null && !agent.pathPending)
-        {
-            float speed = agent.velocity.sqrMagnitude;
-
-            if (speed > 0.01f && behaviourState != UnitBehaviourState.Moving && !isAttacking)
-                SetBehaviourState(UnitBehaviourState.Moving);
-            else if (speed <= 0.01f && !isAttacking && behaviourState != UnitBehaviourState.Idle)
-                SetBehaviourState(UnitBehaviourState.Idle);
-        }
     }
 
     // ============================================================
@@ -640,13 +629,22 @@ public class Unit : Selectable
             // si se llegó (o el agente no puede llegar) -> idle
             if (unit.agent == null) return;
 
-            if (!unit.agent.pathPending)
+            // Si todavía está ajustando el camino, mantener animación de movimiento
+            if (unit.agent.pathPending)
             {
-                if (!unit.agent.hasPath || unit.agent.remainingDistance <= unit.agent.stoppingDistance)
-                {
-                    if (unit.behaviourState != UnitBehaviourState.Moving)
-                        unit.ChangeState(new IdleState(unit));
-                }
+                unit.PlayWalkAnimation();
+                return;
+            }
+
+            // Si todavía no ha llegado, pero se está moviendo o rotando hacia el destino
+            if (unit.agent.remainingDistance > unit.agent.stoppingDistance)
+            {
+                unit.PlayWalkAnimation(); // asegura animación activa
+            }
+            else
+            {
+                // Si ya llegó completamente, cambiar a Idle
+                unit.ChangeState(new IdleState(unit));
             }
         }
 
