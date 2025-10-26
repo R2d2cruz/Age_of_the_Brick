@@ -51,7 +51,7 @@ public class Unit : Selectable
     [Tooltip("World Space canvas containing the health bar (Slider).")]
     [SerializeField] private Canvas healthCanvas;
     [SerializeField] private Slider healthSlider;
-    [SerializeField] private Vector3 healthCanvasOffset = new Vector3(0f, 4.2f, 0f);
+    [SerializeField] private Vector3 healthCanvasOffset = new Vector3(0f, 5.4f, 0f);
     private static Camera mainCamCached; // Cached main camera reference for efficiency.
 
     // ============================================================

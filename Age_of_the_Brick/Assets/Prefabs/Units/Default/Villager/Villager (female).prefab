@@ -442,6 +442,7 @@ MonoBehaviour:
   - {fileID: 7256240300423932194}
   - {fileID: 8827103488480297224}
   - {fileID: 3167964376763467187}
+  state: 0
   stats: {fileID: 11400000, guid: f03ab0731b360454088de641c27057ac, type: 2}
   currentStats:
     vida: 0
@@ -453,8 +454,10 @@ MonoBehaviour:
     velocidadAtaque: 0
     ataqueLigero: 0
     ataquePesado: 0
+    costosDeCreaccion: 00000000000000000000000000000000
     velocidadCuracion: 0
     velocidadConstruccion: 0
+    velocidadRecoleccion: 0
   currentHealth: 0
   healthCanvas: {fileID: 988906696191547794}
   healthSlider: {fileID: 4809025794909192495}
@@ -464,9 +467,11 @@ MonoBehaviour:
   healthyColor: {r: 0, g: 1, b: 0, a: 1}
   warningColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   dangerColor: {r: 1, g: 0, b: 0, a: 1}
+  fightsAfterDeath: 0
+  postDeathFightDuration: 2
   axe: {fileID: 2564802241321890469}
   pickaxe: {fileID: 7622023273109300931}
-  pitchFork: {fileID: 6152015567986945475}
+  pitchfork: {fileID: 6152015567986945475}
   dot: {fileID: 8304562561753473553}
   fishingRod: {fileID: 4970870327005377186}
 --- !u!95 &8315269637132787189

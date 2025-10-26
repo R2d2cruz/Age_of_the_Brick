@@ -12,73 +12,88 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ba6f4db6bc9c5845b67cec844bd873f, type: 3}
   m_Name: VillagerStats
   m_EditorClassIdentifier: Assembly-CSharp::UnitStats
-  unitName: 
-  statsPorEra:
-  - vida: 50
-    defensaLigera: 0
-    defensaPesada: 0
-    vision: 7
-    velocidadMovimiento: 2.6
-    alcance: 1
-    velocidadAtaque: 2
-    ataqueLigero: 2
-    ataquePesado: 0
-    velocidadCuracion: 0
-    velocidadConstruccion: 20
-  - vida: 55
-    defensaLigera: 1
-    defensaPesada: 0
-    vision: 7
-    velocidadMovimiento: 2.6
-    alcance: 1
-    velocidadAtaque: 2
-    ataqueLigero: 3
-    ataquePesado: 0
-    velocidadCuracion: 0
-    velocidadConstruccion: 22
-  - vida: 60
-    defensaLigera: 1
-    defensaPesada: 1
-    vision: 8
-    velocidadMovimiento: 2.6
-    alcance: 1
-    velocidadAtaque: 2
-    ataqueLigero: 4
-    ataquePesado: 0
-    velocidadCuracion: 0
-    velocidadConstruccion: 24
-  - vida: 65
-    defensaLigera: 2
-    defensaPesada: 1
-    vision: 8
-    velocidadMovimiento: 2.6
-    alcance: 1
-    velocidadAtaque: 2
-    ataqueLigero: 5
-    ataquePesado: 0
-    velocidadCuracion: 0
-    velocidadConstruccion: 28
-  - vida: 70
-    defensaLigera: 2
-    defensaPesada: 2
-    vision: 9
-    velocidadMovimiento: 2.6
-    alcance: 1
-    velocidadAtaque: 2
-    ataqueLigero: 6
-    ataquePesado: 0
-    velocidadCuracion: 0
-    velocidadConstruccion: 30
-  - vida: 75
-    defensaLigera: 3
-    defensaPesada: 2
-    vision: 9
-    velocidadMovimiento: 2.6
-    alcance: 1
-    velocidadAtaque: 2
-    ataqueLigero: 7
-    ataquePesado: 0
-    velocidadCuracion: 0
-    velocidadConstruccion: 32
-  evolucionaVisual: 0
-  prefabsPorEra: []
+  unitName: Villager
+  unitSpace: 1
+  creationCosts: 32000000000000000000000000000000
+  trainingTime: 0
+  statsPerEra:
+  - health: 50
+    lightDefense: 0
+    heavyDefense: 0
+    visionRange: 7
+    moveSpeed: 2.6
+    range: 1
+    attackSpeed: 2.6
+    lightAttack: 2
+    heavyAttack: 0
+    buildingMultiplier: 4
+    healSpeed: 0
+    buildSpeed: 20
+    gatherSpeed: 1.5
+  - health: 55
+    lightDefense: 1
+    heavyDefense: 0
+    visionRange: 7
+    moveSpeed: 2.6
+    range: 1
+    attackSpeed: 2.6
+    lightAttack: 3
+    heavyAttack: 0
+    buildingMultiplier: 4
+    healSpeed: 0
+    buildSpeed: 22
+    gatherSpeed: 1.5
+  - health: 60
+    lightDefense: 1
+    heavyDefense: 1
+    visionRange: 8
+    moveSpeed: 2.6
+    range: 1
+    attackSpeed: 2
+    lightAttack: 4
+    heavyAttack: 0
+    buildingMultiplier: 4
+    healSpeed: 0
+    buildSpeed: 24
+    gatherSpeed: 1.5
+  - health: 65
+    lightDefense: 2
+    heavyDefense: 1
+    visionRange: 9
+    moveSpeed: 2.6
+    range: 1
+    attackSpeed: 2
+    lightAttack: 5
+    heavyAttack: 0
+    buildingMultiplier: 4
+    healSpeed: 0
+    buildSpeed: 28
+    gatherSpeed: 1.5
+  - health: 70
+    lightDefense: 2
+    heavyDefense: 2
+    visionRange: 9
+    moveSpeed: 2.6
+    range: 1
+    attackSpeed: 2
+    lightAttack: 6
+    heavyAttack: 0
+    buildingMultiplier: 4
+    healSpeed: 0
+    buildSpeed: 30
+    gatherSpeed: 1.5
+  - health: 75
+    lightDefense: 3
+    heavyDefense: 2
+    visionRange: 9
+    moveSpeed: 2.6
+    range: 1
+    attackSpeed: 2
+    lightAttack: 7
+    heavyAttack: 0
+    buildingMultiplier: 4
+    healSpeed: 0
+    buildSpeed: 32
+    gatherSpeed: 1.5
+  hasVisualEvolution: 0
+  prefabsPerEra: []
