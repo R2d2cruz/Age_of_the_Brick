@@ -12,24 +12,26 @@ public enum UnitBehaviourState
 }
 
 /// <summary>
-/// Clase base de las unidades en el juego.
-/// Hereda de Selectable, lo que permite interacción del jugador (selección, comandos).
-/// Controla movimiento, combate, animaciones y UI de salud.
+/// Base class for all in-game units.
+/// Inherits from <see cref="Selectable"/>, allowing player interaction (selection, commands).
+/// Controls movement, combat, animations, and health UI.
 /// </summary>
 public class Unit : Selectable
 {
     // ============================================================
-    // CONFIGURACIÓN GENERAL
+    // GENERAL CONFIGURATION
     // ============================================================
 
-    [Header("Configuración General")]
-    public UnitStats stats;                 // ScriptableObject con las estadísticas por era.
-    public EraStats currentStats;           // Stats activas (dependen de la era).
-    private Animator animator;              // Controlador de animaciones.
-    private NavMeshAgent agent;             // Controlador de movimiento.
-    private Renderer rend;                  // Render del modelo principal.
+    [Header("General Configuration")]
+    public UnitStats stats;                 // ScriptableObject containing per-era stats.
+    public EraStats currentStats;           // Active stats depending on the current era.
+    private Animator animator;              // Animation controller.
+    private NavMeshAgent agent;             // Navigation and pathfinding agent.
+    private Renderer rend;                  // Main model renderer.
 
-    // Estado de vida en tiempo de ejecución.
+    /// <summary>
+    /// Current health value of the unit at runtime.
+    /// </summary>
     public float currentHealth;
 
     // ============================================================
@@ -37,27 +39,27 @@ public class Unit : Selectable
     // ============================================================
 
     /// <summary>
-    /// Jugador propietario de la unidad. Controla acceso, registro y cambios de era.
+    /// Player who owns this unit. Handles registration, access, and era changes.
     /// </summary>
     private Player Owner;
 
     // ============================================================
-    // UI DE VIDA (World Space)
+    // HEALTH UI (WORLD SPACE)
     // ============================================================
 
     [Header("Health UI (World)")]
-    [Tooltip("Canvas en modo World Space que contiene la barra de vida (Slider).")]
+    [Tooltip("World Space canvas containing the health bar (Slider).")]
     [SerializeField] private Canvas healthCanvas;
     [SerializeField] private Slider healthSlider;
     [SerializeField] private Vector3 healthCanvasOffset = new Vector3(0f, 4.2f, 0f);
-    private static Camera mainCamCached; // Cache de cámara principal para evitar llamadas costosas.
+    private static Camera mainCamCached; // Cached main camera reference for efficiency.
 
     // ============================================================
-    // VISIBILIDAD DE BARRA DE VIDA
+    // HEALTH BAR VISIBILITY
     // ============================================================
 
     [Header("Health UI Behavior")]
-    [SerializeField] private float showHealthDuration = 3f;  // Tiempo visible tras daño/curación.
+    [SerializeField] private float showHealthDuration = 3f;  // Visible time after taking damage/healing.
     private float lastHealthChangeTime = -999f;
     private bool isHealthVisible = false;
 
@@ -68,29 +70,29 @@ public class Unit : Selectable
     [SerializeField] private Color dangerColor = Color.red;
 
     // ============================================================
-    // COMBATE Y ESTADO
+    // COMBAT AND STATE
     // ============================================================
 
     private bool isAttacking = false;
-    private Selectable currentTarget;   // objetivo genérico (puede ser resource/building/unit)
-    private Unit attackTarget;          // objetivo si es unidad enemiga
+    private Selectable currentTarget;   // Generic target (resource/building/unit)
+    private Unit attackTarget;          // Combat target (enemy unit)
 
     [Header("Death Behavior")]
-    public bool fightsAfterDeath = false;       // Permite atacar unos segundos después de morir.
-    public float postDeathFightDuration = 2f;   // Duración del estado “post muerte”.
+    public bool fightsAfterDeath = false;       // Allows post-death fighting for a short time.
+    public float postDeathFightDuration = 2f;   // Duration of post-death state.
 
     // ============================================================
-    // State machine (instancia simple por unidad)
+    // STATE MACHINE
     // ============================================================
 
-    [Header("Estados de la unidad")]
+    [Header("Unit States")]
     private UnitBehaviourState behaviourState = UnitBehaviourState.Idle;
     public UnitBehaviourState BehaviourState => behaviourState;
 
-    private UnitState currentState; // instancia actual del estado
+    private UnitState currentState; // Current state instance.
 
     // ============================================================
-    // MÉTODOS DE CICLO DE VIDA
+    // LIFECYCLE METHODS
     // ============================================================
 
     protected override void Start()
@@ -101,11 +103,11 @@ public class Unit : Selectable
         TryGetComponent(out agent);
         TryGetComponent(out rend);
 
-        // Cache de cámara
+        // Cache main camera
         if (mainCamCached == null)
             mainCamCached = Camera.main;
 
-        // Intentar asignar dueño automáticamente
+        // Try to auto-assign owner
         if (Owner == null && PlayerManager.Instance != null)
         {
             Player possibleOwner = PlayerManager.Instance.GetPlayer(ownerPlayerId);
@@ -113,10 +115,10 @@ public class Unit : Selectable
                 Initialize(possibleOwner);
         }
 
-        // Ocultar barra de vida al inicio si está llena
+        // Hide health bar if full at start
         healthCanvas?.gameObject.SetActive(false);
 
-        // Inicializar estado por defecto
+        // Default state
         ChangeState(new IdleState(this));
     }
 
@@ -127,11 +129,11 @@ public class Unit : Selectable
     }
 
     // ============================================================
-    // INICIALIZACIÓN Y RELACIÓN CON PLAYER
+    // INITIALIZATION AND PLAYER RELATIONSHIP
     // ============================================================
 
     /// <summary>
-    /// Inicializa la unidad con el propietario y la registra en su sistema.
+    /// Initializes the unit with its owner and registers it in the player's system.
     /// </summary>
     public void Initialize(Player owner)
     {
@@ -141,7 +143,7 @@ public class Unit : Selectable
         UpdateStats(owner.CurrentEra);
 
         if (currentHealth <= 0)
-            currentHealth = currentStats.vida;
+            currentHealth = currentStats.health;
 
         Owner.Registry.RegisterUnit(this);
 
@@ -162,76 +164,76 @@ public class Unit : Selectable
     }
 
     // ============================================================
-    // CAMBIO DE ERA Y EVOLUCIÓN
+    // ERA CHANGE AND EVOLUTION
     // ============================================================
 
     /// <summary>
-    /// Cambia los stats o modelo de la unidad según la nueva era.
+    /// Handles era change: updates stats or model depending on unit type.
     /// </summary>
-    private void HandleEraChange(int nuevaEra)
+    private void HandleEraChange(int newEra)
     {
-        if (stats.evolucionaVisual)
+        if (stats.hasVisualEvolution)
         {
-            GameObject nuevoGO = Instantiate(stats.prefabsPorEra[nuevaEra], transform.position, transform.rotation);
-            Unit nuevaUnidad = nuevoGO.GetComponent<Unit>();
-            nuevaUnidad.Initialize(Owner);
-            nuevaUnidad.InheritFrom(this, nuevaEra);
+            GameObject newGO = Instantiate(stats.prefabsPerEra[newEra], transform.position, transform.rotation);
+            Unit newUnit = newGO.GetComponent<Unit>();
+            newUnit.Initialize(Owner);
+            newUnit.InheritFrom(this, newEra);
             Destroy(gameObject);
         }
         else
         {
-            UpdateStats(nuevaEra);
+            UpdateStats(newEra);
         }
     }
 
     // ============================================================
-    // STATS Y VIDA
+    // STATS AND HEALTH
     // ============================================================
 
     /// <summary>
-    /// Actualiza las estadísticas según la era y conserva la proporción de vida.
+    /// Updates stats according to the era, maintaining health proportionally.
     /// </summary>
     public void UpdateStats(int era)
     {
         EraStats oldStats = currentStats;
-        currentStats = stats.statsPorEra[era];
+        currentStats = stats.statsPerEra[era];
 
-        if (oldStats != null && oldStats.vida > 0)
+        if (oldStats != null && oldStats.health > 0)
         {
-            float porcentajeVida = currentHealth / oldStats.vida;
-            currentHealth = Mathf.Clamp(currentStats.vida * porcentajeVida, 0.0f, currentStats.vida);
+            float healthPercent = currentHealth / oldStats.health;
+            currentHealth = Mathf.Clamp(currentStats.health * healthPercent, 0.0f, currentStats.health);
         }
-        else currentHealth = currentStats.vida;
+        else currentHealth = currentStats.health;
 
         if (agent != null)
-            agent.speed = currentStats.velocidadMovimiento;
+            agent.speed = currentStats.moveSpeed;
 
         if (animator != null)
         {
-            animator.SetFloat("moveSpeedMultiplier", currentStats.velocidadMovimiento);
-            animator.SetFloat("attackSpeedMultiplier", currentStats.velocidadAtaque);
+            animator.SetFloat("moveSpeedMultiplier", currentStats.moveSpeed);
+            animator.SetFloat("attackSpeedMultiplier", currentStats.attackSpeed);
         }
 
         if (healthSlider != null)
         {
-            healthSlider.maxValue = currentStats.vida;
+            healthSlider.maxValue = currentStats.health;
             healthSlider.value = currentHealth;
         }
     }
 
     /// <summary>
-    /// Transfiere estado entre versiones de unidad (al evolucionar visualmente).
+    /// Transfers relevant data when evolving visually between eras.
     /// </summary>
     public void InheritFrom(Unit oldUnit, int era)
     {
-        currentHealth = Mathf.Min(oldUnit.currentHealth, stats.statsPorEra[era].vida);
+        currentHealth = Mathf.Min(oldUnit.currentHealth, stats.statsPerEra[era].health);
         UpdateStats(era);
 
         if (oldUnit.attackTarget != null)
         {
             attackTarget = oldUnit.attackTarget;
             if (oldUnit.isAttacking)
-                ChangeState(new AttackingState(this)); // reiniciar estado de ataque en la nueva unidad
+                ChangeState(new AttackingState(this));
         }
 
         if (oldUnit.agent != null && oldUnit.agent.hasPath)
@@ -239,22 +241,21 @@ public class Unit : Selectable
     }
 
     // ============================================================
-    // UPDATE
+    // UPDATE LOOP
     // ============================================================
 
     private void Update()
     {
-        if (state == SelectableState.Dead) return; // ya no hace nada si está muerta
+        if (state == SelectableState.Dead) return;
 
         UpdateHealthCanvasTransform();
         UpdateHealthVisibility();
 
-        // Tick del estado actual (si existe)
         currentState?.Tick();
     }
 
     // ============================================================
-    // State machine helpers
+    // STATE MACHINE HELPERS
     // ============================================================
 
     private void SetBehaviourState(UnitBehaviourState newState)
@@ -263,7 +264,6 @@ public class Unit : Selectable
 
         behaviourState = newState;
 
-        // Solo cambia animación (asegura compatibilidad con tus setters de animator)
         switch (newState)
         {
             case UnitBehaviourState.Idle:
@@ -280,17 +280,14 @@ public class Unit : Selectable
 
     protected void ChangeState(UnitState newState)
     {
-        // Exit estado anterior
         currentState?.Exit();
         currentState = newState;
-        // Enter nuevo estado
         currentState?.Enter();
-        // Mantener flag de comportamiento (visibilidad externa)
         SetBehaviourState(currentState.GetBehaviourState());
     }
 
     // ============================================================
-    // UI DE VIDA
+    // HEALTH UI
     // ============================================================
 
     private void InitHealthUI()
@@ -304,7 +301,7 @@ public class Unit : Selectable
         healthCanvas.transform.localPosition = healthCanvasOffset;
 
         healthSlider.minValue = 0f;
-        healthSlider.maxValue = (currentStats != null) ? currentStats.vida : 1f;
+        healthSlider.maxValue = (currentStats != null) ? currentStats.health : 1f;
         healthSlider.value = currentHealth;
 
         UpdateHealthBarColor();
@@ -315,7 +312,7 @@ public class Unit : Selectable
     {
         if (healthSlider == null) return;
 
-        healthSlider.value = Mathf.Clamp(currentHealth, 0f, (currentStats != null) ? currentStats.vida : currentHealth);
+        healthSlider.value = Mathf.Clamp(currentHealth, 0f, (currentStats != null) ? currentStats.health : currentHealth);
         lastHealthChangeTime = Time.time;
         SetHealthVisibility(true);
         UpdateHealthBarColor();
@@ -325,10 +322,10 @@ public class Unit : Selectable
     {
         if (healthFillImage == null || currentStats == null) return;
 
-        float porcentaje = currentHealth / currentStats.vida;
-        if (porcentaje > 0.6f)
+        float percent = currentHealth / currentStats.health;
+        if (percent > 0.6f)
             healthFillImage.color = healthyColor;
-        else if (porcentaje > 0.3f)
+        else if (percent > 0.3f)
             healthFillImage.color = warningColor;
         else
             healthFillImage.color = dangerColor;
@@ -359,7 +356,7 @@ public class Unit : Selectable
     }
 
     // ============================================================
-    // ANIMACIONES
+    // ANIMATIONS
     // ============================================================
 
     public virtual void PlayIdleAnimation()
@@ -386,7 +383,7 @@ public class Unit : Selectable
     }
 
     // ============================================================
-    // SELECCIÓN VISUAL
+    // VISUAL SELECTION
     // ============================================================
 
     public void SetSelected(bool selected)
@@ -396,7 +393,7 @@ public class Unit : Selectable
     }
 
     // ============================================================
-    // MOVIMIENTO Y COMBATE (API pública intacta)
+    // MOVEMENT AND COMBAT (PUBLIC API)
     // ============================================================
 
     public void Wait()
@@ -442,7 +439,7 @@ public class Unit : Selectable
         }
         else if (target.CompareTag("Building"))
         {
-            // Pendiente: reparar o atacar edificio
+            // TODO: handle building interaction
         }
     }
 
@@ -457,16 +454,16 @@ public class Unit : Selectable
     }
 
     // ============================================================
-    // COMBATE Y RUTINAS
+    // COMBAT AND ROUTINES
     // ============================================================
 
     /// <summary>
-    /// Busca el enemigo más cercano dentro del radio de visión.
+    /// Finds the nearest enemy unit within the visionRange radius.
     /// </summary>
     private Unit FindNearestEnemy()
     {
-        float visionRadius = (currentStats != null && currentStats.vision * 2 > 0) ? currentStats.vision * 2 : 12f;
-        Collider[] hits = Physics.OverlapSphere(transform.position, visionRadius);
+        float visionRangeRadius = (currentStats != null && currentStats.visionRange * 2 > 0) ? currentStats.visionRange * 2 : 12f;
+        Collider[] hits = Physics.OverlapSphere(transform.position, visionRangeRadius);
 
         Unit nearestEnemy = null;
         float minDist = Mathf.Infinity;
@@ -504,8 +501,7 @@ public class Unit : Selectable
     }
 
     /// <summary>
-    /// Método llamado por el estado de ataque cuando corresponde.
-    /// Conserva la misma firma y función que antes para compatibilidad con overrides.
+    /// Called by attack animation event when the hit connects.
     /// </summary>
     public virtual void OnAttackHit()
     {
@@ -513,16 +509,19 @@ public class Unit : Selectable
         if (attackTarget.state == SelectableState.Dead) return;
 
         float dist = Vector3.Distance(transform.position, attackTarget.transform.position);
-        if (dist > currentStats.alcance && dist > 2) return;
-        attackTarget.TakeDamage(currentStats.ataqueLigero, currentStats.ataquePesado);
+        if (dist > currentStats.range && dist > 2) return;
+        attackTarget.TakeDamage(currentStats.lightAttack, currentStats.heavyAttack);
     }
 
-    public void TakeDamage(int dmgLigero, int dmgPesado)
+    /// <summary>
+    /// Applies incoming damage considering defenses.
+    /// </summary>
+    public void TakeDamage(int lightDamage, int heavyDamage)
     {
         if (state == SelectableState.Dead) return;
 
-        int finalDamage = Mathf.Max(0, dmgLigero - currentStats.defensaLigera) +
-                          Mathf.Max(0, dmgPesado - currentStats.defensaPesada);
+        int finalDamage = Mathf.Max(0, lightDamage - currentStats.lightDefense) +
+                          Mathf.Max(0, heavyDamage - currentStats.heavyDefense);
 
         currentHealth -= finalDamage;
         UpdateHealthUI();
@@ -536,7 +535,7 @@ public class Unit : Selectable
 
     public void Heal(float amount)
     {
-        currentHealth = Mathf.Min(currentStats.vida, currentHealth + amount);
+        currentHealth = Mathf.Min(currentStats.health, currentHealth + amount);
         UpdateHealthUI();
     }
 
@@ -568,13 +567,13 @@ public class Unit : Selectable
         if (currentStats != null)
         {
             Gizmos.color = Color.red;
-            float visionRadius = (currentStats.vision > 0) ? currentStats.vision : 12f;
-            Gizmos.DrawWireSphere(transform.position, visionRadius);
+            float visionRangeRadius = (currentStats.visionRange > 0) ? currentStats.visionRange : 12f;
+            Gizmos.DrawWireSphere(transform.position, visionRangeRadius);
         }
     }
 
     // ============================================================
-    // === Unit State classes (internas, acceden a 'this' unidad)
+    // === Internal State Classes ===
     // ============================================================
 
     protected abstract class UnitState
@@ -592,7 +591,6 @@ public class Unit : Selectable
         public IdleState(Unit u) : base(u) { }
         public override void Enter()
         {
-            // detener movimiento y animaciones si corresponde
             if (unit.agent != null)
             {
                 unit.agent.ResetPath();
@@ -619,31 +617,26 @@ public class Unit : Selectable
 
         public override void Tick()
         {
-            // Si se convirtió en target de ataque (target válido), cambiar a Attacking
             if (unit.attackTarget != null && unit.attackTarget != unit && unit.attackTarget.state == SelectableState.Alive)
             {
                 unit.ChangeState(new AttackingState(unit));
                 return;
             }
 
-            // si se llegó (o el agente no puede llegar) -> idle
             if (unit.agent == null) return;
 
-            // Si todavía está ajustando el camino, mantener animación de movimiento
             if (unit.agent.pathPending)
             {
                 unit.PlayWalkAnimation();
                 return;
             }
 
-            // Si todavía no ha llegado, pero se está moviendo o rotando hacia el destino
             if (unit.agent.remainingDistance > unit.agent.stoppingDistance)
             {
-                unit.PlayWalkAnimation(); // asegura animación activa
+                unit.PlayWalkAnimation();
             }
             else
             {
-                // Si ya llegó completamente, cambiar a Idle
                 unit.ChangeState(new IdleState(unit));
             }
         }
@@ -660,22 +653,17 @@ public class Unit : Selectable
         {
             unit.isAttacking = true;
             unit.SetBehaviourState(UnitBehaviourState.Attacking);
-            attackCooldown = 1f / Mathf.Max(0.0001f, unit.currentStats.velocidadAtaque);
-            // detener NavMeshAgent si está dentro de rango gestionado por Tick
-            // no tocar animators aquí más que a través de SetBehaviourState -> PlayAttackAnimation
+            attackCooldown = 1f / Mathf.Max(0.0001f, unit.currentStats.attackSpeed);
         }
 
         public override void Tick()
         {
-            // Si objetivo null o muerto -> buscar otro o ir a Idle
             if (unit.attackTarget == null || unit.attackTarget.state != SelectableState.Alive)
             {
-                // buscar reemplazo
                 Unit newTarget = unit.FindNearestEnemy();
                 if (newTarget != null)
                 {
                     unit.attackTarget = newTarget;
-                    // seguir atacando al nuevo objetivo
                 }
                 else
                 {
@@ -685,14 +673,11 @@ public class Unit : Selectable
                 }
             }
 
-            // Si tenemos objetivo válido
             if (unit.attackTarget != null)
             {
-                // Distancia
                 float dist = Vector3.Distance(unit.transform.position, unit.attackTarget.transform.position);
 
-                // Si fuera de rango, mover hacia objetivo
-                if (dist > unit.currentStats.alcance && dist > 2f)
+                if (dist > unit.currentStats.range && dist > 2f)
                 {
                     if (unit.agent != null)
                     {
@@ -719,8 +704,7 @@ public class Unit : Selectable
                         // Reproduce la animación, y el evento dentro de ella llamará a OnAttackHit()
                         unit.PlayAttackAnimation();
 
-                        // Reinicia cooldown basado en velocidad de ataque
-                        attackCooldown = 1f / Mathf.Max(0.0001f, unit.currentStats.velocidadAtaque);
+                        attackCooldown = 1f / Mathf.Max(0.0001f, unit.currentStats.attackSpeed);
                     }
                 }
             }
@@ -729,7 +713,7 @@ public class Unit : Selectable
         public override void Exit()
         {
             unit.isAttacking = false;
-            // no detener agente ni animaciones aquí: StopAttacking hace eso si se quiere
+            unit.animator?.SetBool("attack", false);
         }
 
         public override UnitBehaviourState GetBehaviourState() => UnitBehaviourState.Attacking;

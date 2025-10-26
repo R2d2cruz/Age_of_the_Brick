@@ -1,92 +1,149 @@
 using UnityEngine;
 
+/// <summary>
+/// Representa una unidad aldeana (Villager) capaz de realizar tareas de recolección,
+/// construcción y combate básico. Hereda de Unit e integra la máquina de estados.
+/// </summary>
 public class Villager : Unit
 {
-    [Header("Herramientas (en Right_Hand)")]
+    [Header("Tools (attached to Right_Hand)")]
     [SerializeField] private GameObject axe;
     [SerializeField] private GameObject pickaxe;
-    [SerializeField] private GameObject pitchFork;
+    [SerializeField] private GameObject pitchfork;
     [SerializeField] private GameObject dot;
     [SerializeField] private GameObject fishingRod;
 
+    // -------------------------
+    // INITIALIZATION
+    // -------------------------
     protected override void Start()
     {
         base.Start();
-        OcultarTodasLasHerramientas();
+        HideAllTools();
     }
+
+    // -------------------------
+    // STATE BEHAVIORS
+    // -------------------------
+
+    /// <summary>
+    /// Reproduce la animación Idle y desactiva herramientas.
+    /// </summary>
     public override void PlayIdleAnimation()
     {
         base.PlayIdleAnimation();
+        HideAllTools();
     }
 
+    /// <summary>
+    /// Reproduce la animación de ataque con herramienta activa.
+    /// </summary>
     protected override void PlayAttackAnimation()
     {
-        MostrarHerramienta(axe);
+        ShowTool(axe);
         base.PlayAttackAnimation();
     }
 
     // -------------------------
-    // ACCIONES ESPECÍFICAS DEL ALDEANO
+    // SPECIFIC ACTIONS
     // -------------------------
 
+    /// <summary>
+    /// Acción de talar árboles (usa hacha).
+    /// </summary>
     public void ChopWood()
     {
-        PlayAttackAnimation(); // Usa la animación de Unit
-        MostrarHerramienta(axe);
+        ChangeState(new AttackingState(this));
+        PlayAttackAnimation();
+        ShowTool(axe);
     }
 
+    /// <summary>
+    /// Acción de minería (usa pico).
+    /// </summary>
     public void Mine()
     {
+        ChangeState(new AttackingState(this));
         PlayAttackAnimation();
-        MostrarHerramienta(pickaxe);
+        ShowTool(pickaxe);
     }
 
+    /// <summary>
+    /// Acción de agricultura (usa tridente/horqueta).
+    /// </summary>
     public void Farm()
     {
+        ChangeState(new AttackingState(this));
         PlayAttackAnimation();
-        MostrarHerramienta(pitchFork);
+        ShowTool(pitchfork);
     }
 
+    /// <summary>
+    /// Acción de pesca (usa caña y flotador).
+    /// </summary>
     public void Fish()
     {
+        ChangeState(new AttackingState(this));
         PlayAttackAnimation();
-        MostrarHerramienta(dot);
-        MostrarHerramienta(fishingRod);
+        ShowTool(dot);
+        ShowTool(fishingRod);
     }
 
+    /// <summary>
+    /// Acción de construcción (se mueve al edificio y activa herramienta adecuada).
+    /// </summary>
     public void StartBuilding(Building target)
     {
-        MoveTo(target.transform.position); // heredado de Unit
-        MostrarHerramienta(pickaxe); // puedes cambiar a animación de construcción si existe
+        if (target == null) return;
+
+        MoveTo(target.transform.position);
+        ShowTool(pickaxe);
     }
 
+    /// <summary>
+    /// Lleva los recursos recolectados hasta un punto de entrega.
+    /// </summary>
     public void DeliverResources(Vector3 dropPoint)
     {
         MoveTo(dropPoint);
     }
 
     // -------------------------
-    // HERRAMIENTAS
+    // TOOL MANAGEMENT
     // -------------------------
-    private void OcultarTodasLasHerramientas()
+
+    /// <summary>
+    /// Oculta todas las herramientas del aldeano.
+    /// </summary>
+    private void HideAllTools()
     {
-        if (axe != null) axe.SetActive(false);
-        if (pickaxe != null) pickaxe.SetActive(false);
-        if (pitchFork != null) pitchFork.SetActive(false);
-        if (dot != null) dot.SetActive(false);
-        if (fishingRod != null) fishingRod.SetActive(false);
+        if (axe) axe.SetActive(false);
+        if (pickaxe) pickaxe.SetActive(false);
+        if (pitchfork) pitchfork.SetActive(false);
+        if (dot) dot.SetActive(false);
+        if (fishingRod) fishingRod.SetActive(false);
     }
 
-    private void MostrarHerramienta(GameObject herramienta)
+    /// <summary>
+    /// Muestra una herramienta específica (ocultando las demás).
+    /// </summary>
+    private void ShowTool(GameObject tool)
     {
-        OcultarTodasLasHerramientas();
-        if (herramienta != null) herramienta.SetActive(true);
+        HideAllTools();
+        if (tool) tool.SetActive(true);
     }
 
-    // Se puede sobrescribir OnAttackHit para agregar tool anims si se quiere
-    public override void OnAttackHit()
+    // -------------------------
+    // ANIMATION CALLBACKS
+    // -------------------------
+
+    /// <summary>
+    /// Evento llamado desde la animación de ataque.
+    /// Se ejecuta justo cuando el golpe debe aplicarse.
+    /// </summary>
+    /* public override void OnAttackHit()
     {
         base.OnAttackHit();
-        MostrarHerramienta(axe); // por defecto el ataque usa el hacha
-    }
+        ShowTool(axe); // por defecto el ataque usa el hacha
+    } */
 }

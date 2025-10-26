@@ -1,20 +1,35 @@
 using UnityEngine;
-using UnityEngine.InputSystem; // 👈 Necesario para el nuevo Input System
+using UnityEngine.InputSystem;
 
+/// <summary>
+/// Handles player-issued commands such as movement, attack, and interactions
+/// for the currently selected units.
+/// </summary>
 public class CommandHandler : MonoBehaviour
 {
+    [Header("References")]
     [SerializeField] private SelectionHandler selectionHandler;
+
+    [Header("Layer Masks")]
     [SerializeField] private LayerMask groundMask;  // capa del suelo
     [SerializeField] private LayerMask targetMask;  // capa de enemigos, recursos, etc.
+
+    [Header("Player Settings")]
     [SerializeField] private int localPlayerId = 1; // 🔹 el jugador actual
 
     private Camera mainCamera;
 
+    /// <summary>
+    /// Gets the main camera reference.
+    /// </summary>
     private void Awake()
     {
         mainCamera = Camera.main;
     }
 
+    /// <summary>
+    /// Checks for right-click input each frame and processes commands accordingly.
+    /// </summary>
     private void Update()
     {
         // 👇 Nueva forma de detectar click derecho
@@ -24,6 +39,10 @@ public class CommandHandler : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Determines whether the player's click is on a target (enemy, resource, etc.)
+    /// or on the ground, and issues the appropriate command to the selected units.
+    /// </summary>
     private void HandleCommand()
     {
         Vector2 mousePos = Mouse.current.position.ReadValue(); // 👈 Nueva forma de leer posición del mouse
@@ -49,7 +68,7 @@ public class CommandHandler : MonoBehaviour
                             else
                             {
                                 // 🔹 Aquí luego se puede expandir a recolectar, reparar, etc.
-                                //unit.InteractWith(target);
+                                // unit.InteractWith(target);
                             }
                         }
                     }
