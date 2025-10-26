@@ -11,7 +11,6 @@ public enum UnitBehaviourState
     Waiting
 }
 
-
 /// <summary>
 /// Clase base de las unidades en el juego.
 /// Hereda de Selectable, lo que permite interacción del jugador (selección, comandos).
@@ -73,22 +72,22 @@ public class Unit : Selectable
     // ============================================================
 
     private bool isAttacking = false;
-    private Selectable currentTarget;
-    private Unit attackTarget;
+    private Selectable currentTarget;   // objetivo genérico (puede ser resource/building/unit)
+    private Unit attackTarget;          // objetivo si es unidad enemiga
 
     [Header("Death Behavior")]
     public bool fightsAfterDeath = false;       // Permite atacar unos segundos después de morir.
     public float postDeathFightDuration = 2f;   // Duración del estado “post muerte”.
 
     // ============================================================
-    // State machine
+    // State machine (instancia simple por unidad)
     // ============================================================
 
     [Header("Estados de la unidad")]
-
     private UnitBehaviourState behaviourState = UnitBehaviourState.Idle;
     public UnitBehaviourState BehaviourState => behaviourState;
 
+    private UnitState currentState; // instancia actual del estado
 
     // ============================================================
     // MÉTODOS DE CICLO DE VIDA
@@ -116,6 +115,9 @@ public class Unit : Selectable
 
         // Ocultar barra de vida al inicio si está llena
         healthCanvas?.gameObject.SetActive(false);
+
+        // Inicializar estado por defecto
+        ChangeState(new IdleState(this));
     }
 
     private void OnDestroy()
@@ -229,7 +231,7 @@ public class Unit : Selectable
         {
             attackTarget = oldUnit.attackTarget;
             if (oldUnit.isAttacking)
-                StartCoroutine(AttackRoutine());
+                ChangeState(new AttackingState(this)); // reiniciar estado de ataque en la nueva unidad
         }
 
         if (oldUnit.agent != null && oldUnit.agent.hasPath)
@@ -247,18 +249,23 @@ public class Unit : Selectable
         UpdateHealthCanvasTransform();
         UpdateHealthVisibility();
 
-        if (agent == null || agent.pathPending) return;
+        // Tick del estado actual (si existe)
+        currentState?.Tick();
 
-        float speed = agent.velocity.sqrMagnitude;
+        // Si el agente está moviéndose, actualizamos el behaviourState de manera conservadora
+        if (agent != null && !agent.pathPending)
+        {
+            float speed = agent.velocity.sqrMagnitude;
 
-        if (speed > 0.01f && behaviourState != UnitBehaviourState.Moving && !isAttacking)
-            SetBehaviourState(UnitBehaviourState.Moving);
-        else if (speed <= 0.01f && !isAttacking && behaviourState != UnitBehaviourState.Idle)
-            SetBehaviourState(UnitBehaviourState.Idle);
+            if (speed > 0.01f && behaviourState != UnitBehaviourState.Moving && !isAttacking)
+                SetBehaviourState(UnitBehaviourState.Moving);
+            else if (speed <= 0.01f && !isAttacking && behaviourState != UnitBehaviourState.Idle)
+                SetBehaviourState(UnitBehaviourState.Idle);
+        }
     }
 
     // ============================================================
-    // State Machine
+    // State machine helpers
     // ============================================================
 
     private void SetBehaviourState(UnitBehaviourState newState)
@@ -267,6 +274,7 @@ public class Unit : Selectable
 
         behaviourState = newState;
 
+        // Solo cambia animación (asegura compatibilidad con tus setters de animator)
         switch (newState)
         {
             case UnitBehaviourState.Idle:
@@ -281,6 +289,16 @@ public class Unit : Selectable
         }
     }
 
+    private void ChangeState(UnitState newState)
+    {
+        // Exit estado anterior
+        currentState?.Exit();
+        currentState = newState;
+        // Enter nuevo estado
+        currentState?.Enter();
+        // Mantener flag de comportamiento (visibilidad externa)
+        SetBehaviourState(currentState.GetBehaviourState());
+    }
 
     // ============================================================
     // UI DE VIDA
@@ -389,7 +407,7 @@ public class Unit : Selectable
     }
 
     // ============================================================
-    // MOVIMIENTO Y COMBATE
+    // MOVIMIENTO Y COMBATE (API pública intacta)
     // ============================================================
 
     public void Wait()
@@ -398,12 +416,11 @@ public class Unit : Selectable
         attackTarget = null;
         isAttacking = false;
         if (agent != null) agent.isStopped = true;
-        SetBehaviourState(UnitBehaviourState.Idle);
+        ChangeState(new IdleState(this));
     }
 
     public void MoveTo(Vector3 destination)
     {
-        StopAllCoroutines();
         currentTarget = null;
         attackTarget = null;
         isAttacking = false;
@@ -414,14 +431,13 @@ public class Unit : Selectable
             agent.SetDestination(destination);
         }
 
-        SetBehaviourState(UnitBehaviourState.Moving);
+        ChangeState(new MovingState(this, destination));
     }
 
     public void SetTarget(Selectable target)
     {
         if (target == null) return;
 
-        StopAllCoroutines();
         currentTarget = target;
         attackTarget = target.GetComponent<Unit>();
         isAttacking = false;
@@ -429,7 +445,7 @@ public class Unit : Selectable
         if (attackTarget != null && attackTarget.Owner != Owner)
         {
             isAttacking = true;
-            StartCoroutine(AttackRoutine());
+            ChangeState(new AttackingState(this));
         }
         else if (target.CompareTag("Resource"))
         {
@@ -445,11 +461,10 @@ public class Unit : Selectable
     {
         if (target == null) return;
 
-        StopAllCoroutines();
         currentTarget = target;
         attackTarget = target;
         isAttacking = true;
-        StartCoroutine(AttackRoutine());
+        ChangeState(new AttackingState(this));
     }
 
     // ============================================================
@@ -500,58 +515,9 @@ public class Unit : Selectable
     }
 
     /// <summary>
-    /// Corrutina principal de ataque cuerpo a cuerpo o a distancia.
-    /// Controla el seguimiento del objetivo y la transición entre combate y reposo.
+    /// Método llamado por el estado de ataque cuando corresponde.
+    /// Conserva la misma firma y función que antes para compatibilidad con overrides.
     /// </summary>
-    private IEnumerator AttackRoutine()
-    {
-        while (attackTarget != null)
-        {
-            // Si el objetivo muere, buscar reemplazo o detener ataque.
-            if (attackTarget.state == SelectableState.Dead)
-            {
-                yield return new WaitForSeconds(0.1f);
-                Unit newTarget = FindNearestEnemy();
-
-                if (newTarget != null)
-                {
-                    attackTarget = newTarget;
-                    continue;
-                }
-                else
-                {
-                    StopAttacking();
-                    yield break;
-                }
-            }
-
-            float dist = Vector3.Distance(transform.position, attackTarget.transform.position);
-            if (dist <= currentStats.alcance || dist <= 2)
-            {
-                agent.isStopped = true;
-
-                // Mirar hacia el objetivo
-                Vector3 lookDir = attackTarget.transform.position - transform.position;
-                lookDir.y = 0;
-                if (lookDir.sqrMagnitude > 0.001f)
-                    transform.rotation = Quaternion.LookRotation(lookDir);
-
-                SetBehaviourState(UnitBehaviourState.Attacking);
-                yield return new WaitForSeconds(1f / currentStats.velocidadAtaque);
-            }
-            else
-            {
-                agent.isStopped = false;
-                agent.SetDestination(attackTarget.transform.position);
-                SetBehaviourState(UnitBehaviourState.Moving);
-            }
-
-            yield return null;
-        }
-
-        StopAttacking();
-    }
-
     public virtual void OnAttackHit()
     {
         if (attackTarget == null) return;
@@ -616,5 +582,158 @@ public class Unit : Selectable
             float visionRadius = (currentStats.vision > 0) ? currentStats.vision : 12f;
             Gizmos.DrawWireSphere(transform.position, visionRadius);
         }
+    }
+
+    // ============================================================
+    // === Unit State classes (internas, acceden a 'this' unidad)
+    // ============================================================
+
+    private abstract class UnitState
+    {
+        protected Unit unit;
+        public UnitState(Unit u) { unit = u; }
+        public virtual void Enter() { }
+        public virtual void Exit() { }
+        public virtual void Tick() { }
+        public virtual UnitBehaviourState GetBehaviourState() { return UnitBehaviourState.Idle; }
+    }
+
+    private class IdleState : UnitState
+    {
+        public IdleState(Unit u) : base(u) { }
+        public override void Enter()
+        {
+            // detener movimiento y animaciones si corresponde
+            if (unit.agent != null)
+            {
+                unit.agent.ResetPath();
+                unit.agent.isStopped = true;
+            }
+            unit.SetBehaviourState(UnitBehaviourState.Idle);
+        }
+        public override UnitBehaviourState GetBehaviourState() => UnitBehaviourState.Idle;
+    }
+
+    private class MovingState : UnitState
+    {
+        private Vector3 destination;
+        public MovingState(Unit u, Vector3 dest) : base(u) { destination = dest; }
+        public override void Enter()
+        {
+            if (unit.agent != null)
+            {
+                unit.agent.isStopped = false;
+                unit.agent.SetDestination(destination);
+            }
+            unit.SetBehaviourState(UnitBehaviourState.Moving);
+        }
+
+        public override void Tick()
+        {
+            // Si se convirtió en target de ataque (target válido), cambiar a Attacking
+            if (unit.attackTarget != null && unit.attackTarget != unit && unit.attackTarget.state == SelectableState.Alive)
+            {
+                unit.ChangeState(new AttackingState(unit));
+                return;
+            }
+
+            // si se llegó (o el agente no puede llegar) -> idle
+            if (unit.agent == null) return;
+
+            if (!unit.agent.pathPending)
+            {
+                if (!unit.agent.hasPath || unit.agent.remainingDistance <= unit.agent.stoppingDistance)
+                {
+                    if (unit.behaviourState != UnitBehaviourState.Moving)
+                        unit.ChangeState(new IdleState(unit));
+                }
+            }
+        }
+
+        public override UnitBehaviourState GetBehaviourState() => UnitBehaviourState.Moving;
+    }
+
+    private class AttackingState : UnitState
+    {
+        private float attackCooldown = 0;
+        public AttackingState(Unit u) : base(u) { }
+
+        public override void Enter()
+        {
+            unit.isAttacking = true;
+            unit.SetBehaviourState(UnitBehaviourState.Attacking);
+            attackCooldown = 1f / Mathf.Max(0.0001f, unit.currentStats.velocidadAtaque);
+            // detener NavMeshAgent si está dentro de rango gestionado por Tick
+            // no tocar animators aquí más que a través de SetBehaviourState -> PlayAttackAnimation
+        }
+
+        public override void Tick()
+        {
+            // Si objetivo null o muerto -> buscar otro o ir a Idle
+            if (unit.attackTarget == null || unit.attackTarget.state != SelectableState.Alive)
+            {
+                // buscar reemplazo
+                Unit newTarget = unit.FindNearestEnemy();
+                if (newTarget != null)
+                {
+                    unit.attackTarget = newTarget;
+                    // seguir atacando al nuevo objetivo
+                }
+                else
+                {
+                    unit.StopAttacking();
+                    unit.ChangeState(new IdleState(unit));
+                    return;
+                }
+            }
+
+            // Si tenemos objetivo válido
+            if (unit.attackTarget != null)
+            {
+                // Distancia
+                float dist = Vector3.Distance(unit.transform.position, unit.attackTarget.transform.position);
+
+                // Si fuera de rango, mover hacia objetivo
+                if (dist > unit.currentStats.alcance && dist > 2f)
+                {
+                    if (unit.agent != null)
+                    {
+                        unit.agent.isStopped = false;
+                        unit.agent.SetDestination(unit.attackTarget.transform.position);
+                    }
+                    unit.SetBehaviourState(UnitBehaviourState.Moving);
+                }
+                else
+                {
+                    // En rango: detenerse, rotar y atacar según cooldown
+                    if (unit.agent != null) unit.agent.isStopped = true;
+
+                    Vector3 lookDir = unit.attackTarget.transform.position - unit.transform.position;
+                    lookDir.y = 0;
+                    if (lookDir.sqrMagnitude > 0.001f)
+                        unit.transform.rotation = Quaternion.LookRotation(lookDir);
+
+                    unit.SetBehaviourState(UnitBehaviourState.Attacking);
+
+                    attackCooldown -= Time.deltaTime;
+                    if (attackCooldown <= 0f)
+                    {
+                        // Reproduce la animación, y el evento dentro de ella llamará a OnAttackHit()
+                        unit.PlayAttackAnimation();
+
+                        // Reinicia cooldown basado en velocidad de ataque
+                        attackCooldown = 1f / Mathf.Max(0.0001f, unit.currentStats.velocidadAtaque);
+                    }
+                }
+            }
+        }
+
+        public override void Exit()
+        {
+            unit.isAttacking = false;
+            // no detener agente ni animaciones aquí: StopAttacking hace eso si se quiere
+        }
+
+        public override UnitBehaviourState GetBehaviourState() => UnitBehaviourState.Attacking;
     }
 }
