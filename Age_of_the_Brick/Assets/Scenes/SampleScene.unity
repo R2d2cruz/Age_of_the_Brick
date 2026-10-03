@@ -716,6 +716,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   healthBarPrefab: {fileID: 3672054533767663900, guid: 8b0d96c17a8a7fa49a1b579b35c67c24, type: 3}
   globalCanvas: {fileID: 2083074922}
+  barsParent: {fileID: 363862127}
 --- !u!1 &684456155
 GameObject:
   m_ObjectHideFlags: 0
