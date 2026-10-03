@@ -32,7 +32,6 @@ public class Player
 
     public void Update(float deltaTime)
     {
-        Registry.UpdateCache(deltaTime);
     }
 
     // --- Eras ---

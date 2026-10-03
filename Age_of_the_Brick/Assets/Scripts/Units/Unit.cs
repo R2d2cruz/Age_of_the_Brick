@@ -48,26 +48,8 @@ public class Unit : Selectable
     // ============================================================
 
     [Header("Health UI (World)")]
-    [Tooltip("World Space canvas containing the health bar (Slider).")]
-    [SerializeField] private Canvas healthCanvas;
-    [SerializeField] private Slider healthSlider;
     [SerializeField] private Vector3 healthCanvasOffset = new Vector3(0f, 5.4f, 0f);
     private static Camera mainCamCached; // Cached main camera reference for efficiency.
-
-    // ============================================================
-    // HEALTH BAR VISIBILITY
-    // ============================================================
-
-    [Header("Health UI Behavior")]
-    [SerializeField] private float showHealthDuration = 3f;  // Visible time after taking damage/healing.
-    private float lastHealthChangeTime = -999f;
-    private bool isHealthVisible = false;
-
-    [Header("Health Bar Colors")]
-    [SerializeField] private Image healthFillImage;
-    [SerializeField] private Color healthyColor = Color.green;
-    [SerializeField] private Color warningColor = Color.yellow;
-    [SerializeField] private Color dangerColor = Color.red;
 
     // ============================================================
     // COMBAT AND STATE
@@ -115,9 +97,6 @@ public class Unit : Selectable
                 Initialize(possibleOwner);
         }
 
-        // Hide health bar if full at start
-        healthCanvas?.gameObject.SetActive(false);
-
         // Default state
         ChangeState(new IdleState(this));
     }
@@ -146,9 +125,6 @@ public class Unit : Selectable
             currentHealth = currentStats.health;
 
         Owner.Registry.RegisterUnit(this);
-
-        InitHealthUI();
-        UpdateHealthUI();
     }
 
     private void SubscribeToOwner()
@@ -213,12 +189,6 @@ public class Unit : Selectable
             animator.SetFloat("moveSpeedMultiplier", currentStats.moveSpeed);
             animator.SetFloat("attackSpeedMultiplier", currentStats.attackSpeed);
         }
-
-        if (healthSlider != null)
-        {
-            healthSlider.maxValue = currentStats.health;
-            healthSlider.value = currentHealth;
-        }
     }
 
     /// <summary>
@@ -247,9 +217,6 @@ public class Unit : Selectable
     private void Update()
     {
         if (state == SelectableState.Dead) return;
-
-        UpdateHealthCanvasTransform();
-        UpdateHealthVisibility();
 
         currentState?.Tick();
     }
@@ -290,69 +257,9 @@ public class Unit : Selectable
     // HEALTH UI
     // ============================================================
 
-    private void InitHealthUI()
+    public Vector3 get_healthCanvasOffset()
     {
-        if (healthCanvas == null || healthSlider == null) return;
-
-        if (healthCanvas.renderMode != RenderMode.WorldSpace)
-            healthCanvas.renderMode = RenderMode.WorldSpace;
-
-        healthCanvas.transform.SetParent(transform, false);
-        healthCanvas.transform.localPosition = healthCanvasOffset;
-
-        healthSlider.minValue = 0f;
-        healthSlider.maxValue = (currentStats != null) ? currentStats.health : 1f;
-        healthSlider.value = currentHealth;
-
-        UpdateHealthBarColor();
-        healthCanvas.gameObject.SetActive(false);
-    }
-
-    private void UpdateHealthUI()
-    {
-        if (healthSlider == null) return;
-
-        healthSlider.value = Mathf.Clamp(currentHealth, 0f, (currentStats != null) ? currentStats.health : currentHealth);
-        lastHealthChangeTime = Time.time;
-        SetHealthVisibility(true);
-        UpdateHealthBarColor();
-    }
-
-    private void UpdateHealthBarColor()
-    {
-        if (healthFillImage == null || currentStats == null) return;
-
-        float percent = currentHealth / currentStats.health;
-        if (percent > 0.6f)
-            healthFillImage.color = healthyColor;
-        else if (percent > 0.3f)
-            healthFillImage.color = warningColor;
-        else
-            healthFillImage.color = dangerColor;
-    }
-
-    private void UpdateHealthCanvasTransform()
-    {
-        if (healthCanvas == null || mainCamCached == null) return;
-
-        healthCanvas.transform.position = transform.position + healthCanvasOffset;
-        healthCanvas.transform.rotation = Quaternion.LookRotation(mainCamCached.transform.forward);
-    }
-
-    private void UpdateHealthVisibility()
-    {
-        if (!isHealthVisible) return;
-        if (Time.time - lastHealthChangeTime > showHealthDuration)
-            SetHealthVisibility(false);
-    }
-
-    private void SetHealthVisibility(bool visible)
-    {
-        if (healthCanvas != null && visible != isHealthVisible)
-        {
-            healthCanvas.gameObject.SetActive(visible);
-            isHealthVisible = visible;
-        }
+        return healthCanvasOffset;
     }
 
     // ============================================================
@@ -524,7 +431,6 @@ public class Unit : Selectable
                           Mathf.Max(0, heavyDamage - currentStats.heavyDefense);
 
         currentHealth -= finalDamage;
-        UpdateHealthUI();
 
         if (currentHealth <= 0f && state == SelectableState.Alive)
         {
@@ -536,7 +442,6 @@ public class Unit : Selectable
     public void Heal(float amount)
     {
         currentHealth = Mathf.Min(currentStats.health, currentHealth + amount);
-        UpdateHealthUI();
     }
 
     private IEnumerator DyingRoutine()
@@ -554,7 +459,6 @@ public class Unit : Selectable
 
         state = SelectableState.Dead;
         isAttacking = false;
-        healthCanvas?.gameObject.SetActive(false);
 
         StopAllCoroutines();
         animator?.SetTrigger("die");
