@@ -2,13 +2,29 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+
+/// <summary>
+/// Handles the health bar UI for a unit. 
+/// Displays a world-space bar that updates position, value, and color dynamically.
+/// Works under a global Canvas (recommended for performance).
+/// </summary>
+
 public class HealthBar : MonoBehaviour
 {
+    [Header("UI References")]
+    [Tooltip("Slider component representing health percentage.")]
     [SerializeField] private Slider slider;
+
+    [Tooltip("Image used to display the filled part of the health bar.")]
     [SerializeField] private Image fillImage;
+
+    [Header("Appearance")]
     [SerializeField] private Color healthyColor = Color.green;
     [SerializeField] private Color warningColor = Color.yellow;
     [SerializeField] private Color dangerColor = Color.red;
+
+    [Header("Visibility Settings")]
+    [Tooltip("Time in seconds that the bar remains visible after a change.")]
     [SerializeField] private float showDuration = 3f; // tiempo visible tras cambio
 
     private Transform target;
@@ -17,6 +33,9 @@ public class HealthBar : MonoBehaviour
     private float lastChangeTime;
     private bool isVisible;
 
+    /// <summary>
+    /// Initializes the health bar with its target transform and offset.
+    /// </summary>
     public void Initialize(Transform target, Vector3 offset)
     {
         this.target = target;
@@ -28,6 +47,9 @@ public class HealthBar : MonoBehaviour
         isVisible = false;
     }
 
+    /// <summary>
+    /// Updates the health bar value and color.
+    /// </summary>
     public void UpdateHealth(float current, float max)
     {
         slider.maxValue = max;
