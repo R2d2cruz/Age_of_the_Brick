@@ -437,11 +437,15 @@ public class Unit : Selectable
             state = SelectableState.Dying;
             StartCoroutine(DyingRoutine());
         }
+
+        HealthBarsManager.Instance.UpdateUnitHealth(this, currentHealth, currentStats.health);
     }
 
     public void Heal(float amount)
     {
         currentHealth = Mathf.Min(currentStats.health, currentHealth + amount);
+
+        HealthBarsManager.Instance.UpdateUnitHealth(this, currentHealth, currentStats.health);
     }
 
     private IEnumerator DyingRoutine()

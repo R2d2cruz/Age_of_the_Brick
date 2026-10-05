@@ -117,14 +117,7 @@ MonoBehaviour:
     buildSpeed: 0
     gatherSpeed: 0
   currentHealth: 0
-  healthCanvas: {fileID: 0}
-  healthSlider: {fileID: 0}
   healthCanvasOffset: {x: 0, y: 4.2, z: 0}
-  showHealthDuration: 3
-  healthFillImage: {fileID: 0}
-  healthyColor: {r: 0, g: 1, b: 0, a: 1}
-  warningColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  dangerColor: {r: 1, g: 0, b: 0, a: 1}
   fightsAfterDeath: 0
   postDeathFightDuration: 2
   axe: {fileID: 2564802241321890469}
