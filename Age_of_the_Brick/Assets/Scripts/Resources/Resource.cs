@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// Represents a gatherable resource node in the world (Trees, Quarries, Mines, etc.)[cite: 1].
+/// Represents a gatherable resource node in the world (Trees, Quarries, Mines, etc.).
 /// </summary>
 public class Resource : Selectable
 {
