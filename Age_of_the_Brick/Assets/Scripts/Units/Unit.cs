@@ -539,8 +539,8 @@ public class Unit : Selectable
         if (attackTarget == null) return;
         if (attackTarget.state == SelectableState.Dead) return;
 
-        float dist = Vector3.Distance(transform.position, attackTarget.transform.position);
-        if (dist > currentStats.range && dist > 2) return;
+        float distance = GetDistanceToTargetSurface(attackTarget);
+        if (distance > GetInteractionRange()) return;
         attackTarget.TakeDamage(currentStats.lightAttack, currentStats.heavyAttack);
     }
 
@@ -707,9 +707,10 @@ public class Unit : Selectable
 
             if (unit.attackTarget != null)
             {
-                float dist = Vector3.Distance(unit.transform.position, unit.attackTarget.transform.position);
+                float distanceToTarget = unit.GetDistanceToTargetSurface(unit.attackTarget);
+                float attackRange = unit.GetInteractionRange();
 
-                if (dist > unit.currentStats.range && dist > 2f)
+                if (distanceToTarget > attackRange)
                 {
                     if (unit.agent != null)
                     {
