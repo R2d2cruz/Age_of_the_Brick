@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 8315269637132787189}
   m_Layer: 3
   m_Name: Villager (female)
-  m_TagString: Untagged
+  m_TagString: Unit
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
