@@ -72,6 +72,18 @@ public class Unit : Selectable
     public UnitBehaviourState BehaviourState => behaviourState;
 
     private UnitState currentState; // Current state instance.
+    // Cached state instances to avoid GC allocations during transitions
+    protected UnitState idleState;
+    protected UnitState moveState;
+    protected UnitState attackState;
+
+    protected virtual void Awake()
+    {
+        // Initialize state cache via Virtual Factory Methods
+        idleState = CreateIdleState();
+        moveState = CreateMoveState();
+        attackState = CreateAttackState();
+    }
 
     // ============================================================
     // LIFECYCLE METHODS
@@ -96,9 +108,12 @@ public class Unit : Selectable
             if (possibleOwner != null)
                 Initialize(possibleOwner);
         }
-
-        // Default state
-        ChangeState(new IdleState(this));
+        
+        // Set default state
+        if (currentState == null)
+        {
+            ChangeState(idleState);
+        }
     }
 
     private void OnDestroy()
@@ -203,7 +218,7 @@ public class Unit : Selectable
         {
             attackTarget = oldUnit.attackTarget;
             if (oldUnit.isAttacking)
-                ChangeState(new AttackingState(this));
+                ChangeState(attackState);
         }
 
         if (oldUnit.agent != null && oldUnit.agent.hasPath)
@@ -225,7 +240,47 @@ public class Unit : Selectable
     // STATE MACHINE HELPERS
     // ============================================================
 
-    private void SetBehaviourState(UnitBehaviourState newState)
+    #region Virtual State Factories (Subclasses override these as needed)
+
+    protected virtual UnitState CreateIdleState()
+    {
+        return new IdleState(this);
+    }
+
+    protected virtual UnitState CreateMoveState()
+    {
+        return new MovingState(this, Vector3.zero);
+    }
+
+    protected virtual UnitState CreateAttackState()
+    {
+        return new AttackingState(this);
+    }
+
+    #endregion
+
+    #region State Change Functions
+
+    protected virtual void ChangeToIdleState()
+    {
+        ChangeState(idleState);
+    }
+
+    protected virtual void ChangeToMoveState(Vector3 des)
+    {
+        moveState = new MovingState(this, des);
+        ChangeState(moveState);
+    }
+
+    protected virtual void ChangeToAttackState()
+    {
+        ChangeState(attackState);
+    }
+
+    #endregion
+
+
+    protected void SetBehaviourState(UnitBehaviourState newState)
     {
         if (behaviourState == newState) return;
 
@@ -309,7 +364,7 @@ public class Unit : Selectable
         attackTarget = null;
         isAttacking = false;
         if (agent != null) agent.isStopped = true;
-        ChangeState(new IdleState(this));
+        ChangeToIdleState();
     }
 
     public void MoveTo(Vector3 destination)
@@ -324,7 +379,8 @@ public class Unit : Selectable
             agent.SetDestination(destination);
         }
 
-        ChangeState(new MovingState(this, destination));
+        // If MoveState needs parameters, configure them before changing state
+        ChangeToMoveState(destination);
     }
 
     public void SetTarget(Selectable target)
@@ -338,7 +394,7 @@ public class Unit : Selectable
         if (attackTarget != null && attackTarget.Owner != Owner)
         {
             isAttacking = true;
-            ChangeState(new AttackingState(this));
+            ChangeToAttackState();
         }
         else if (target.CompareTag("Resource"))
         {
@@ -357,7 +413,7 @@ public class Unit : Selectable
         currentTarget = target;
         attackTarget = target;
         isAttacking = true;
-        ChangeState(new AttackingState(this));
+        ChangeToAttackState();
     }
 
     // ============================================================
@@ -367,7 +423,7 @@ public class Unit : Selectable
     /// <summary>
     /// Finds the nearest enemy unit within the visionRange radius.
     /// </summary>
-    private Unit FindNearestEnemy()
+    protected Unit FindNearestEnemy()
     {
         float visionRangeRadius = (currentStats != null && currentStats.visionRange * 2 > 0) ? currentStats.visionRange * 2 : 12f;
         Collider[] hits = Physics.OverlapSphere(transform.position, visionRangeRadius);
@@ -527,7 +583,7 @@ public class Unit : Selectable
         {
             if (unit.attackTarget != null && unit.attackTarget != unit && unit.attackTarget.state == SelectableState.Alive)
             {
-                unit.ChangeState(new AttackingState(unit));
+                unit.ChangeToAttackState();
                 return;
             }
 
@@ -545,7 +601,7 @@ public class Unit : Selectable
             }
             else
             {
-                unit.ChangeState(new IdleState(unit));
+                unit.ChangeToIdleState();
             }
         }
 
@@ -576,7 +632,7 @@ public class Unit : Selectable
                 else
                 {
                     unit.StopAttacking();
-                    unit.ChangeState(new IdleState(unit));
+                    unit.ChangeToIdleState();
                     return;
                 }
             }
