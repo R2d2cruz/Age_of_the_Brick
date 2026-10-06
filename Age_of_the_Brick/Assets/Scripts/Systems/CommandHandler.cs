@@ -61,15 +61,7 @@ public class CommandHandler : MonoBehaviour
                         Unit unit = obj.GetComponent<Unit>();
                         if (unit != null)
                         {
-                            if (target.IsEnemyTo(localPlayerId))
-                            {
-                                unit.Attack(target.GetComponent<Unit>()); // 🔹 orden de ataque
-                            }
-                            else
-                            {
-                                // 🔹 Aquí luego se puede expandir a recolectar, reparar, etc.
-                                // unit.InteractWith(target);
-                            }
+                            unit.ExecuteContextCommand(target); // Smart contextual command
                         }
                     }
                 }

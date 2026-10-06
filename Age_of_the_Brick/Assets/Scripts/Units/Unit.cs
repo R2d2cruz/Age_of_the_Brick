@@ -108,7 +108,7 @@ public class Unit : Selectable
             if (possibleOwner != null)
                 Initialize(possibleOwner);
         }
-        
+
         // Set default state
         if (currentState == null)
         {
@@ -234,6 +234,25 @@ public class Unit : Selectable
         if (state == SelectableState.Dead) return;
 
         currentState?.Tick();
+    }
+
+    /// <summary>
+    /// Executes a contextual order on a targeted Selectable object (e.g., enemy unit, resource, or building).
+    /// </summary>
+    /// <param name="target">The target Selectable clicked by the player.</param>
+    public virtual void ExecuteContextCommand(Selectable target)
+    {
+        if (target == null || target.state == SelectableState.Dead) return;
+
+        // Check if the target belongs to an opposing player
+        if (target.IsEnemyTo(ownerPlayerId))
+        {
+            Unit enemyUnit = target.GetComponent<Unit>();
+            if (enemyUnit != null)
+            {
+                Attack(enemyUnit);
+            }
+        }
     }
 
     // ============================================================

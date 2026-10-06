@@ -44,6 +44,36 @@ public class Villager : Unit
         base.PlayAttackAnimation();
     }
 
+    /// <summary>
+    /// Overrides context commands to handle resource gathering and building construction.
+    /// </summary>
+    /// <param name="target">The target Selectable clicked by the player.</param>
+    public override void ExecuteContextCommand(Selectable target)
+    {
+        if (target == null || target.state == SelectableState.Dead) return;
+
+        // 1. Interaction with Resource Nodes (Wood, Gold, Stone, Food)
+        if (target.CompareTag("Resource"))
+        {
+            // ResourceNode resource = target.GetComponent<ResourceNode>();
+            // StartGathering(resource);
+        }
+        // 2. Interaction with Allied Buildings (Construction or Repair)
+        else if (target.CompareTag("Building") && !target.IsEnemyTo(ownerPlayerId))
+        {
+            /* Building building = target.GetComponent<Building>();
+            if (building != null && !building.IsFullyBuilt)
+            {
+                StartBuilding(building);
+            } */
+        }
+        // 3. Fallback to base behavior (e.g., attack if enemy)
+        else
+        {
+            base.ExecuteContextCommand(target);
+        }
+    }
+
     // -------------------------
     // SPECIFIC ACTIONS
     // -------------------------
