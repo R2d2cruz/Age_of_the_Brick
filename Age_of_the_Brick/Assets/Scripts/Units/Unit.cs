@@ -25,7 +25,7 @@ public class Unit : Selectable
     [Header("General Configuration")]
     public UnitStats stats;                 // ScriptableObject containing per-era stats.
     public EraStats currentStats;           // Active stats depending on the current era.
-    private Animator animator;              // Animation controller.
+    protected Animator animator;              // Animation controller.
     private NavMeshAgent agent;             // Navigation and pathfinding agent.
     private Renderer rend;                  // Main model renderer.
 
@@ -76,6 +76,59 @@ public class Unit : Selectable
     protected UnitState idleState;
     protected UnitState moveState;
     protected UnitState attackState;
+
+    /// <summary>
+    /// Gets the effective interaction range of the unit based on its current stats.
+    /// Follows the same range pattern as combat attack distances.
+    /// </summary>
+    /// <returns>The unit's interaction range value, or a default fallback if stats are missing.</returns>
+    public float GetInteractionRange()
+    {
+        return (currentStats != null && currentStats.range > 0f) ? currentStats.range : 1.5f;
+    }
+
+    /// <summary>
+    /// Calculates the surface distance from the villager to a target Selectable's collider.
+    /// Takes into account the villager's NavMeshAgent radius for accurate edge-to-edge interaction.
+    /// </summary>
+    /// <param name="target">The target entity with a Collider.</param>
+    /// <returns>Distance from the villager's outer edge to the target's collider surface.</returns>
+    public float GetDistanceToTargetSurface(Selectable target)
+    {
+        if (target == null) return float.MaxValue;
+
+        Collider targetCollider = target.GetComponentInChildren<Collider>();
+        Vector3 villagerPosition = transform.position;
+
+        float agentRadius = (agent != null) ? agent.radius : 0.5f;
+
+        if (targetCollider != null)
+        {
+            // Finds the closest point on the surface of the target's collider
+            Vector3 closestPoint = targetCollider.ClosestPoint(villagerPosition);
+            return Mathf.Max(0f, Vector3.Distance(villagerPosition, closestPoint) - agentRadius);
+        }
+
+        // Fallback if no collider is found on the target
+        return Mathf.Max(0f, Vector3.Distance(villagerPosition, target.transform.position) - agentRadius);
+    }
+
+    /// <summary>
+    /// Calculates the surface distance to a world position or optional building/dropoff collider.
+    /// </summary>
+    public float GetDistanceToPointSurface(Vector3 targetPosition, Collider targetCollider = null)
+    {
+        Vector3 villagerPosition = transform.position;
+        float agentRadius = (agent != null) ? agent.radius : 0.5f;
+
+        if (targetCollider != null)
+        {
+            Vector3 closestPoint = targetCollider.ClosestPoint(villagerPosition);
+            return Mathf.Max(0f, Vector3.Distance(villagerPosition, closestPoint) - agentRadius);
+        }
+
+        return Mathf.Max(0f, Vector3.Distance(villagerPosition, targetPosition) - agentRadius);
+    }
 
     protected virtual void Awake()
     {
@@ -184,7 +237,7 @@ public class Unit : Selectable
     /// <summary>
     /// Updates stats according to the era, maintaining health proportionally.
     /// </summary>
-    public void UpdateStats(int era)
+    public virtual void UpdateStats(int era)
     {
         EraStats oldStats = currentStats;
         currentStats = stats.statsPerEra[era];
@@ -414,10 +467,6 @@ public class Unit : Selectable
         {
             isAttacking = true;
             ChangeToAttackState();
-        }
-        else if (target.CompareTag("Resource"))
-        {
-            MoveTo(target.transform.position);
         }
         else if (target.CompareTag("Building"))
         {
