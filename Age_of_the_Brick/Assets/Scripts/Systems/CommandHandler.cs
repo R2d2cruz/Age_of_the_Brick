@@ -45,10 +45,15 @@ public class CommandHandler : MonoBehaviour
     /// </summary>
     private void HandleCommand()
     {
-        Vector2 mousePos = Mouse.current.position.ReadValue(); // 👈 Nueva forma de leer posición del mouse
+        // Dynamically obtain the ID of the current local player
+        int activeLocalPlayerId = PlayerManager.Instance != null
+            ? PlayerManager.Instance.GetLocalPlayerId()
+            : localPlayerId;
+
+        Vector2 mousePos = Mouse.current.position.ReadValue();
         Ray ray = mainCamera.ScreenPointToRay(mousePos);
 
-        // 🔹 Click en un objeto seleccionable (enemigo, recurso, edificio, etc.)
+        // 🔹 Click on a selectable object (enemy, resource, building, etc.)
         if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, targetMask))
         {
             Selectable target = hit.collider.GetComponentInParent<Selectable>();
@@ -56,26 +61,26 @@ public class CommandHandler : MonoBehaviour
             {
                 foreach (var obj in selectionHandler.SelectedObjects)
                 {
-                    if (obj.IsOwnedBy(localPlayerId)) // 🔹 solo mis unidades
+                    if (obj.IsOwnedBy(activeLocalPlayerId)) // 🔹 only my units
                     {
                         Unit unit = obj.GetComponent<Unit>();
                         if (unit != null)
                         {
-                            unit.ExecuteContextCommand(target); // Smart contextual command
+                            unit.ExecuteContextCommand(target);
                         }
                     }
                 }
-                return; // ✅ ya emitimos una orden, no seguimos con el suelo
+                return;
             }
         }
 
-        // 🔹 Si no, click en el terreno → mover
+        // 🔹 Click on the ground → move
         if (Physics.Raycast(ray, out RaycastHit groundHit, Mathf.Infinity, groundMask))
         {
             Vector3 destination = groundHit.point;
             foreach (var obj in selectionHandler.SelectedObjects)
             {
-                if (obj.IsOwnedBy(localPlayerId)) // ✅ solo mis unidades
+                if (obj.IsOwnedBy(activeLocalPlayerId)) // ✅ only my units
                 {
                     Unit unit = obj.GetComponent<Unit>();
                     if (unit != null)

@@ -40,13 +40,30 @@ public class SelectionHandler : MonoBehaviour
 
     private void Start()
     {
-        localPlayer = PlayerManager.Instance.GetPlayer(localPlayerId);
+        if (PlayerManager.Instance != null)
+        {
+            PlayerManager.Instance.OnLocalPlayerChanged += HandleLocalPlayerChanged;
+
+            // Si el PlayerManager ya inicializó al jugador local, obtenerlo de inmediato
+            Player currentLocal = PlayerManager.Instance.GetLocalPlayer();
+            if (currentLocal != null)
+            {
+                HandleLocalPlayerChanged(currentLocal);
+            }
+        }
+    }
+    private void OnDestroy()
+    {
+        if (PlayerManager.Instance != null)
+        {
+            PlayerManager.Instance.OnLocalPlayerChanged -= HandleLocalPlayerChanged;
+        }
     }
 
-    public void SetLocalPlayer(int newPlayerId)
+    private void HandleLocalPlayerChanged(Player newLocalPlayer)
     {
-        localPlayerId = newPlayerId;
-        localPlayer = PlayerManager.Instance.GetPlayer(localPlayerId);
+        localPlayer = newLocalPlayer;
+        localPlayerId = newLocalPlayer.playerId;
     }
 
 
