@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 public class Player
 {
@@ -12,6 +13,15 @@ public class Player
 
     // ✅ Registro de objetos poseídos
     public UnitRegistry Registry { get; private set; } = new UnitRegistry();
+
+    private Dictionary<ResourceType, int> resources = new Dictionary<ResourceType, int>
+    {
+        { ResourceType.TreeBricks, 0 },
+        { ResourceType.BrickFood, 0 },
+        { ResourceType.BricklonBlocks, 0 },
+        { ResourceType.RoyalCoins, 0 },
+        { ResourceType.BrikionFragments, 0 }
+    };
 
     // Evento que notifica la nueva era (solo para las unidades/estructuras de este jugador)
     public event Action<int> OnEraChanged;
@@ -46,5 +56,22 @@ public class Player
     {
         currentEra = era;
         OnEraChanged?.Invoke(currentEra);
+    }
+
+    /// <summary>
+    /// Adds resources to the player's global storage.
+    /// </summary>
+    public void AddResource(ResourceType resourceType, int amount)
+    {
+        if (resources.ContainsKey(resourceType))
+        {
+            resources[resourceType] += amount;
+            Debug.Log($"Jugador {playerName} recibió {amount} de {resourceType}. Total: {resources[resourceType]}");
+        }
+    }
+
+    public int GetResourceAmount(ResourceType resourceType)
+    {
+        return resources.TryGetValue(resourceType, out int amount) ? amount : 0;
     }
 }
