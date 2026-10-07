@@ -1,27 +1,50 @@
 using UnityEngine;
 
+/// <summary>
+/// Core class for all structures. Manages health, ownership, selection, and era updates.
+/// Capabilities (production, resource dropoff, defense) are handled by attached components.
+/// </summary>
 public class Building : Selectable
 {
     [Header("Config")]
     public BuildingStats stats;
     private EraStatsBuilding currentStats;
 
-    // Estado
     public float currentHealth { get; set; }
     public Player Owner { get; private set; }
 
-    private Renderer[] renderers;
-
+    // Cached optional components
+    [SerializeField] public ResourceDropoff DropoffComponent;
+    [SerializeField] public UnitProducer ProducerComponent;
+    [SerializeField] public BuildingConstruction ConstructionComponent;
     private void Awake()
     {
-        renderers = GetComponentsInChildren<Renderer>();
+        TryGetComponent(out DropoffComponent);
+        TryGetComponent(out ProducerComponent);
+        TryGetComponent(out ConstructionComponent);
+    }
+
+    protected override void Start()
+    {
+        base.Start();
+
+        // Try to auto-assign owner
+        if (Owner == null && PlayerManager.Instance != null)
+        {
+            Player possibleOwner = PlayerManager.Instance.GetPlayer(ownerPlayerId);
+            if (possibleOwner != null)
+                Initialize(possibleOwner);
+        }
     }
 
     public void Initialize(Player owner)
     {
         Owner = owner;
+        ownerPlayerId = owner.playerId;
         UpdateStats(owner.CurrentEra);
+
         if (currentHealth <= 0) currentHealth = currentStats.vida;
+
         owner.Registry.RegisterBuilding(this);
     }
 
@@ -43,6 +66,11 @@ public class Building : Selectable
 
     public float GetMaxVida() => currentStats.vida;
 
+    public bool IsFullyBuilt()
+    {
+        return currentHealth >= GetMaxVida();
+    }
+
     public void TakeDamage(int dmgLigero, int dmgPesado)
     {
         int finalDamage = Mathf.Max(0, dmgLigero - currentStats.defensaLigera) +
@@ -55,10 +83,8 @@ public class Building : Selectable
 
     private void Die()
     {
-        // Avisar al BuildingConstruction que dispare animación de destrucción
-        var construction = GetComponent<BuildingConstruction>();
-        if (construction != null)
-            construction.Destruir();
+        if (ConstructionComponent != null)
+            ConstructionComponent.Destruir();
         else
             Destroy(gameObject);
     }
