@@ -41,7 +41,7 @@ public class Unit : Selectable
     /// <summary>
     /// Player who owns this unit. Handles registration, access, and era changes.
     /// </summary>
-    private Player Owner;
+    protected Player Owner { get; private set; }
 
     // ============================================================
     // HEALTH UI (WORLD SPACE)
