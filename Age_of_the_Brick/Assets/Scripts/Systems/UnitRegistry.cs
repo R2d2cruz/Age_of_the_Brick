@@ -69,4 +69,9 @@ public class UnitRegistry
 
         return result;
     }
+
+    public List<Building> GetBuildings()
+    {
+        return allBuildings;
+    }
 }
