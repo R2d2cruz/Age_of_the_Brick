@@ -26,6 +26,12 @@ public class Player
     // Evento que notifica la nueva era (solo para las unidades/estructuras de este jugador)
     public event Action<int> OnEraChanged;
 
+    /// <summary>
+    /// Event that notifies the update of a resource (Type, NewAmount)
+    /// </summary>
+    public event Action<ResourceType, int> OnResourceChanged;
+
+
     public Player(int id, string name, int startingEra = 0, Material mat = null)
     {
         playerId = id;
@@ -66,6 +72,7 @@ public class Player
         if (resources.ContainsKey(resourceType))
         {
             resources[resourceType] += amount;
+            OnResourceChanged?.Invoke(resourceType, resources[resourceType]);
             Debug.Log($"Jugador {playerName} recibió {amount} de {resourceType}. Total: {resources[resourceType]}");
         }
     }
