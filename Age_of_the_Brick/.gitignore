@@ -103,3 +103,8 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# TextMeshPro
+Assets/TextMesh Pro
+Assets/TextMesh Pro.meta
+/Examples & Extras/
