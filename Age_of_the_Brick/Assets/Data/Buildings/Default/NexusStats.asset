@@ -12,6 +12,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2aa643fab30daa54cb9d232b406a49c8, type: 3}
   m_Name: NexusStats
   m_EditorClassIdentifier: 
-  statsPorEra: []
+  statsPorEra:
+  - vida: 100
+    defensaLigera: 0
+    defensaPesada: 0
+    vision: 200
+    tamano: {x: 16, y: 16}
+  - vida: 100
+    defensaLigera: 0
+    defensaPesada: 0
+    vision: 200
+    tamano: {x: 16, y: 16}
+  - vida: 100
+    defensaLigera: 0
+    defensaPesada: 0
+    vision: 0
+    tamano: {x: 16, y: 17}
+  - vida: 100
+    defensaLigera: 0
+    defensaPesada: 0
+    vision: 0
+    tamano: {x: 16, y: 16}
+  - vida: 100
+    defensaLigera: 0
+    defensaPesada: 0
+    vision: 0
+    tamano: {x: 16, y: 16}
+  - vida: 100
+    defensaLigera: 0
+    defensaPesada: 0
+    vision: 0
+    tamano: {x: 16, y: 16}
   prefabsPorEra: []
   evolucionaVisual: 0
