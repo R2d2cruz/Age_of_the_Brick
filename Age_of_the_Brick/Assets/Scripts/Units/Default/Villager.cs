@@ -175,7 +175,6 @@ public class Villager : Unit
     public void AddCarriedResources(int amount)
     {
         currentCarriedAmount = Mathf.Min(currentCarriedAmount + amount, maxCarryCapacity);
-        Debug.Log(currentCarriedAmount);
     }
 
     /// <summary>
@@ -277,27 +276,69 @@ public class Villager : Unit
     #region Dropoff & Resource Search Logic
 
     /// <summary>
-    /// Finds the closest allied drop-off location (Town Center or Storage Building).
+    /// Finds the nearest allied dropoff building that accepts the gathered resource
+    /// using the player's entity registry without relying on physical queries.
     /// </summary>
-    /// <returns>World space position vector of the target drop-off.</returns>
-    public Vector3 FindNearestDropoffPoint()
+    public Building FindNearestDropoffBuilding()
     {
-        // Placeholder: Returns current transform position or finds closest Town Center
-        return transform.position;
+        if (Owner == null || Owner.Registry == null) return null;
+
+        Building nearestBuilding = null;
+        float minDistance = float.MaxValue;
+
+        // Iterate only through the buildings belonging to the player
+        var playerBuildings = Owner.Registry.GetBuildings();
+
+        for (int i = 0; i < playerBuildings.Count; i++)
+        {
+            Building building = playerBuildings[i];
+            if (building == null || !building.IsFullyBuilt()) continue;
+
+            // Check if the building has a dropoff component and accepts the resource
+            ResourceDropoff dropoff = building.DropoffComponent;
+            if (dropoff != null && dropoff.AcceptsResource(currentResourceType))
+            {
+                float distance = GetDistanceToTargetSurface(building);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    nearestBuilding = building;
+                }
+            }
+        }
+        return nearestBuilding;
     }
 
     /// <summary>
-    /// Transfers carried inventory to the player's global economy pool.
+    /// Gets the position of the nearest dropoff point.
+    /// </summary>
+    public Vector3 FindNearestDropoffPoint()
+    {
+        Building dropoffBuilding = FindNearestDropoffBuilding();
+        return dropoffBuilding != null ? dropoffBuilding.transform.position : transform.position;
+    }
+
+    /// <summary>
+    /// Transfers the resource carried by the villager to the dropoff building.
     /// </summary>
     public void DeliverResources()
     {
-        if (currentCarriedAmount > 0)
+        if (currentCarriedAmount <= 0) return;
+
+        Building dropoffBuilding = FindNearestDropoffBuilding();
+
+        if (dropoffBuilding != null && dropoffBuilding.DropoffComponent != null)
         {
-            // PlayerManager.Instance.AddResource(ownerPlayerId, currentResourceType, currentCarriedAmount);
-            Debug.Log($"[Villager] Delivered {currentCarriedAmount} {currentResourceType} to dropoff.");
-            EmptyCarriedResources();
+            // The villager passes the resource type and amount to the building; the building passes it to the Player
+            bool success = dropoffBuilding.DropoffComponent.ReceiveResource(currentResourceType, currentCarriedAmount);
+
+            if (success)
+            {
+                currentCarriedAmount = 0; // Empty the villager's inventory
+            }
         }
     }
+
 
     /// <summary>
     /// Searches nearby area for active resource nodes matching the given resource type.
@@ -484,15 +525,22 @@ public class Villager : Unit
 
         private void HandleMovingToDropoff()
         {
-            Vector3 dropoffPos = villager.FindNearestDropoffPoint();
+            Building dropoffBuilding = villager.FindNearestDropoffBuilding();
 
-            // If FindNearestDropoffPoint returns a Building reference, pass its collider for precise bounds
-            // For now, using point surface calculation:
-            float surfaceDistance = villager.GetDistanceToPointSurface(dropoffPos);
+            if (dropoffBuilding == null)
+            {
+                villager.Wait();
+                return;
+            }
+
+            // Measure the distance directly against the building's collider/surface
+            float surfaceDistance = villager.GetDistanceToTargetSurface(dropoffBuilding);
             float interactionRange = villager.GetInteractionRange();
 
             if (surfaceDistance <= interactionRange)
             {
+                if (agent != null) agent.isStopped = true; // Stop movement at the edge
+
                 villager.DeliverResources();
 
                 if (villager.TargetResource != null && villager.TargetResource.GetQuantity() > 0)
@@ -505,6 +553,7 @@ public class Villager : Unit
                 }
             }
         }
+
 
         private void TryRelocateResource()
         {
