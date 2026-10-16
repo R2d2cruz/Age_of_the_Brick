@@ -24,6 +24,8 @@ public class UISelectionStatsPanel : MonoBehaviour
     [Header("Attributes Elements")]
     [SerializeField] private TextMeshProUGUI attackText;
     [SerializeField] private TextMeshProUGUI defenseText;
+    [SerializeField] private TextMeshProUGUI rangeText;
+    [SerializeField] private TextMeshProUGUI speedText;
 
     [Header("Appearance")]
     [SerializeField] private Color healthyColor = Color.green;
@@ -113,12 +115,14 @@ public class UISelectionStatsPanel : MonoBehaviour
 
                 if (attackText != null) attackText.text = totalAttack.ToString();
                 if (defenseText != null) defenseText.text = totalDefense.ToString();
+                if (rangeText != null) {rangeText.text = unit.currentStats.visionRange.ToString() + (unit.currentStats.range > 1 ? " / " + unit.currentStats.range.ToString() : "");}
+                if (speedText != null) speedText.text = unit.currentStats.moveSpeed.ToString();
             }
         }
         else if (selectable is Building building)
         {
             nameText.text = building.gameObject.name.Replace("(Clone)", "").Trim();
-            
+
             // Fetch image sprite directly from building.currentStats (EraStats)
             if (building.currentStats != null && building.currentStats.image != null)
             {
@@ -132,6 +136,8 @@ public class UISelectionStatsPanel : MonoBehaviour
 
             if (attackText != null) attackText.text = "-";
             if (defenseText != null) defenseText.text = "-";
+            if (rangeText != null) rangeText.text = "-";
+            if (speedText != null) speedText.text = "-";
         }
     }
 
