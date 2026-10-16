@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -5,6 +6,8 @@ using UnityEngine.EventSystems;
 
 public class SelectionHandler : MonoBehaviour
 {
+    public static SelectionHandler Instance { get; private set; }
+
     [Header("Selección con Click")]
     [SerializeField] private LayerMask selectableMask;
 
@@ -28,6 +31,17 @@ public class SelectionHandler : MonoBehaviour
 
     private void Awake()
     {
+        // Singleton pattern setup
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         mainCamera = Camera.main;
         inputActions = new RTSInputActions();
 
