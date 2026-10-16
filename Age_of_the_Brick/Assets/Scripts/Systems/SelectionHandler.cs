@@ -23,6 +23,9 @@ public class SelectionHandler : MonoBehaviour
 
     public List<Selectable> SelectedObjects { get; private set; } = new List<Selectable>();
 
+    // 🔔 Event for UI update notification
+    public event Action<List<Selectable>> OnSelectionChanged;
+
     private Camera mainCamera;
     private Canvas parentCanvas;
     [SerializeField] private int localPlayerId = 1; // 🔹 el jugador actual
@@ -58,7 +61,6 @@ public class SelectionHandler : MonoBehaviour
         {
             PlayerManager.Instance.OnLocalPlayerChanged += HandleLocalPlayerChanged;
 
-            // Si el PlayerManager ya inicializó al jugador local, obtenerlo de inmediato
             Player currentLocal = PlayerManager.Instance.GetLocalPlayer();
             if (currentLocal != null)
             {
@@ -66,6 +68,7 @@ public class SelectionHandler : MonoBehaviour
             }
         }
     }
+
     private void OnDestroy()
     {
         if (PlayerManager.Instance != null)
@@ -79,7 +82,6 @@ public class SelectionHandler : MonoBehaviour
         localPlayer = newLocalPlayer;
         localPlayerId = newLocalPlayer.playerId;
     }
-
 
     private void OnEnable()
     {
@@ -118,7 +120,6 @@ public class SelectionHandler : MonoBehaviour
 
     private void HandleSingleClick(Vector2 clickPos)
     {
-        // Si el cursor está sobre UI, ignoramos la selección del mundo.
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
         {
             if (debugLogs) Debug.Log("Click sobre UI, ignorado.");
@@ -127,7 +128,7 @@ public class SelectionHandler : MonoBehaviour
 
         Ray ray = mainCamera.ScreenPointToRay(clickPos);
 
-        // 1) Intentamos raycast usando la selectableMask (lo correcto si configuraste capas)
+        // 1) Raycast using selectableMask
         if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, selectableMask.value, QueryTriggerInteraction.Collide))
         {
             Selectable selectable = hit.collider.GetComponentInParent<Selectable>();
@@ -136,11 +137,12 @@ public class SelectionHandler : MonoBehaviour
                 if (debugLogs) Debug.Log($"Raycast (mask) hit: {hit.collider.name} -> seleccionando {selectable.name}");
                 ClearSelection();
                 AddToSelection(selectable);
+                NotifySelectionChanged();
                 return;
             }
         }
 
-        // 2) Fallback robusto: raycast all en todas las capas y buscar el Selectable más cercano
+        // 2) Fallback RaycastAll
         RaycastHit[] hits = Physics.RaycastAll(ray, Mathf.Infinity, ~0, QueryTriggerInteraction.Collide);
         float closestDist = Mathf.Infinity;
         Selectable closestSelectable = null;
@@ -160,12 +162,14 @@ public class SelectionHandler : MonoBehaviour
             if (debugLogs) Debug.Log($"RaycastAll found selectable: {closestSelectable.name} (dist {closestDist})");
             ClearSelection();
             AddToSelection(closestSelectable);
+            NotifySelectionChanged();
             return;
         }
 
-        // 3) Si no hay nada: deseleccionar (click en terreno vacío)
+        // 3) Ground click: Clear selection
         if (debugLogs) Debug.Log("Click en vacío -> ClearSelection()");
         ClearSelection();
+        NotifySelectionChanged();
     }
 
     private void HandleDragSelection()
@@ -181,9 +185,12 @@ public class SelectionHandler : MonoBehaviour
         List<Unit> units = localPlayer.Registry.GetUnitsInScreenRect(mainCamera, min, max);
 
         foreach (var unit in units)
+        {
             AddToSelection(unit);
-    }
+        }
 
+        NotifySelectionChanged();
+    }
 
     private void Update()
     {
@@ -216,7 +223,6 @@ public class SelectionHandler : MonoBehaviour
         Vector2 max = Vector2.Max(localStart, localEnd);
         Vector2 size = max - min;
 
-        // suponiendo pivot (0,0) -> esquina inferior izquierda
         selectionBoxUI.anchoredPosition = min;
         selectionBoxUI.sizeDelta = size;
     }
@@ -237,5 +243,10 @@ public class SelectionHandler : MonoBehaviour
             obj.Deselect();
         }
         SelectedObjects.Clear();
+    }
+
+    public void NotifySelectionChanged()
+    {
+        OnSelectionChanged?.Invoke(SelectedObjects);
     }
 }
