@@ -11,6 +11,9 @@ public class EraStats
     // BASIC ATTRIBUTES
     // -------------------------
     [Header("Basic Stats")]
+    [Tooltip("Image of the unit")]
+    public Sprite image;
+
     [Tooltip("Total hit points of the unit in this era.")]
     public int health;
 

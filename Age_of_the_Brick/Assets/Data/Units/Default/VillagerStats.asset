@@ -17,7 +17,8 @@ MonoBehaviour:
   creationCosts: 32000000000000000000000000000000
   trainingTime: 0
   statsPerEra:
-  - health: 50
+  - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
+    health: 50
     lightDefense: 0
     heavyDefense: 0
     visionRange: 7
@@ -30,7 +31,8 @@ MonoBehaviour:
     healSpeed: 0
     buildSpeed: 20
     gatherSpeed: 1.5
-  - health: 55
+  - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
+    health: 55
     lightDefense: 1
     heavyDefense: 0
     visionRange: 7
@@ -43,7 +45,8 @@ MonoBehaviour:
     healSpeed: 0
     buildSpeed: 22
     gatherSpeed: 1.5
-  - health: 60
+  - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
+    health: 60
     lightDefense: 1
     heavyDefense: 1
     visionRange: 8
@@ -56,7 +59,8 @@ MonoBehaviour:
     healSpeed: 0
     buildSpeed: 24
     gatherSpeed: 1.5
-  - health: 65
+  - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
+    health: 65
     lightDefense: 2
     heavyDefense: 1
     visionRange: 9
@@ -69,7 +73,8 @@ MonoBehaviour:
     healSpeed: 0
     buildSpeed: 28
     gatherSpeed: 1.5
-  - health: 70
+  - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
+    health: 70
     lightDefense: 2
     heavyDefense: 2
     visionRange: 9
@@ -82,7 +87,8 @@ MonoBehaviour:
     healSpeed: 0
     buildSpeed: 30
     gatherSpeed: 1.5
-  - health: 75
+  - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
+    health: 75
     lightDefense: 3
     heavyDefense: 2
     visionRange: 9
