@@ -13,32 +13,38 @@ MonoBehaviour:
   m_Name: NexusStats
   m_EditorClassIdentifier: 
   statsPorEra:
-  - vida: 100
+  - image: {fileID: 21300000, guid: 1829b759cac1f4a40aed838b2e739bfe, type: 3}
+    vida: 100
     defensaLigera: 0
     defensaPesada: 0
     vision: 200
     tamano: {x: 16, y: 16}
-  - vida: 100
+  - image: {fileID: 21300000, guid: 1829b759cac1f4a40aed838b2e739bfe, type: 3}
+    vida: 100
     defensaLigera: 0
     defensaPesada: 0
     vision: 200
     tamano: {x: 16, y: 16}
-  - vida: 100
-    defensaLigera: 0
-    defensaPesada: 0
-    vision: 0
-    tamano: {x: 16, y: 17}
-  - vida: 100
+  - image: {fileID: 21300000, guid: 1829b759cac1f4a40aed838b2e739bfe, type: 3}
+    vida: 100
     defensaLigera: 0
     defensaPesada: 0
     vision: 0
     tamano: {x: 16, y: 16}
-  - vida: 100
+  - image: {fileID: 21300000, guid: 1829b759cac1f4a40aed838b2e739bfe, type: 3}
+    vida: 100
     defensaLigera: 0
     defensaPesada: 0
     vision: 0
     tamano: {x: 16, y: 16}
-  - vida: 100
+  - image: {fileID: 21300000, guid: 1829b759cac1f4a40aed838b2e739bfe, type: 3}
+    vida: 100
+    defensaLigera: 0
+    defensaPesada: 0
+    vision: 0
+    tamano: {x: 16, y: 16}
+  - image: {fileID: 21300000, guid: 1829b759cac1f4a40aed838b2e739bfe, type: 3}
+    vida: 100
     defensaLigera: 0
     defensaPesada: 0
     vision: 0

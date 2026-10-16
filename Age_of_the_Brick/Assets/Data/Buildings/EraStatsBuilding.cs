@@ -4,6 +4,7 @@ using UnityEngine;
 public class EraStatsBuilding
 {
     [Header("Estadísticas por Era")]
+    public Sprite image;
     public float vida = 1000f;
     public int defensaLigera = 0;
     public int defensaPesada = 0;
