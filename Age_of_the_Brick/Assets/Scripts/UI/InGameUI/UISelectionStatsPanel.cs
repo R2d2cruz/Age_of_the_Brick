@@ -119,8 +119,16 @@ public class UISelectionStatsPanel : MonoBehaviour
         {
             nameText.text = building.gameObject.name.Replace("(Clone)", "").Trim();
             
-            // Placeholder/Fallback for building portrait if needed
-            portraitImage.gameObject.SetActive(false);
+            // Fetch image sprite directly from building.currentStats (EraStats)
+            if (building.currentStats != null && building.currentStats.image != null)
+            {
+                portraitImage.sprite = building.currentStats.image;
+                portraitImage.gameObject.SetActive(true);
+            }
+            else
+            {
+                portraitImage.gameObject.SetActive(false);
+            }
 
             if (attackText != null) attackText.text = "-";
             if (defenseText != null) defenseText.text = "-";

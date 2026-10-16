@@ -8,7 +8,7 @@ public class Building : Selectable
 {
     [Header("Config")]
     public BuildingStats stats;
-    private EraStatsBuilding currentStats;
+    public EraStatsBuilding currentStats;
 
     public float currentHealth { get; set; }
     public Player Owner { get; private set; }
