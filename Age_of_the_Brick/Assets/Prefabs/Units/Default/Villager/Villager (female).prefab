@@ -103,6 +103,7 @@ MonoBehaviour:
   state: 0
   stats: {fileID: 11400000, guid: f03ab0731b360454088de641c27057ac, type: 2}
   currentStats:
+    image: {fileID: 0}
     health: 0
     lightDefense: 0
     heavyDefense: 0
@@ -120,11 +121,17 @@ MonoBehaviour:
   healthCanvasOffset: {x: 0, y: 4.2, z: 0}
   fightsAfterDeath: 0
   postDeathFightDuration: 2
+  mainCommands:
+  - {fileID: 11400000, guid: 98991d603b27ebf468df9f81d6b5041b, type: 2}
+  - {fileID: 11400000, guid: db9c00f17fbf0bd469473377700bd539, type: 2}
+  backCommandAsset: {fileID: 11400000, guid: 345e7407e7f52a44294e93f054865246, type: 2}
   axe: {fileID: 2564802241321890469}
   pickaxe: {fileID: 7622023273109300931}
   pitchfork: {fileID: 6152015567986945475}
   dot: {fileID: 8304562561753473553}
   fishingRod: {fileID: 4970870327005377186}
+  maxCarryCapacity: 10
+  extractionAmountPerCycle: 2
 --- !u!95 &8315269637132787189
 Animator:
   serializedVersion: 7

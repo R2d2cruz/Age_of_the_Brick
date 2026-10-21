@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
+using System.Collections.Generic;
 
 /// <summary>
 /// Represents a villager unit capable of gathering resources, building structures, and participating in basic combat.
@@ -33,6 +34,11 @@ public class Villager : Unit
     public Resource TargetResource => targetResource;
     public Vector3 LastResourcePosition => lastResourcePosition;
     public int ExtractionAmountPerCycle => extractionAmountPerCycle;
+
+    public void StartPlacingBuilding(BuildingStats stats)
+    {
+        // Spawns building ghost and initiates placement logic[cite: 1]
+    }
 
     // -------------------------
     // INITIALIZATION
