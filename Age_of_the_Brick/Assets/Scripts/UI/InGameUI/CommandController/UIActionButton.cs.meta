@@ -1,0 +1,20 @@
+fileFormatVersion: 2
+guid: e1edad25a65038a498b0a1a8a9517c3a
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - backgroundImage: {instanceID: 0}
+  - iconImage: {instanceID: 0}
+  - hotkeyText: {instanceID: 0}
+  - squareStandardSprite: {fileID: -68845634, guid: 2dd856dc6ba562e469a763ae3b64ec7a, type: 3}
+  - squareSecondarySprite: {fileID: 874265379, guid: 2dd856dc6ba562e469a763ae3b64ec7a, type: 3}
+  - squareWarningSprite: {fileID: -382529592, guid: 2dd856dc6ba562e469a763ae3b64ec7a, type: 3}
+  - squareDisabledSprite: {fileID: 994232077, guid: 2dd856dc6ba562e469a763ae3b64ec7a, type: 3}
+  - arrowNormalSprite: {fileID: -310729372, guid: 2dd856dc6ba562e469a763ae3b64ec7a, type: 3}
+  - arrowDisabledSprite: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
