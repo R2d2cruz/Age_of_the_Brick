@@ -13,9 +13,10 @@ MonoBehaviour:
   m_Name: VillagerStats
   m_EditorClassIdentifier: Assembly-CSharp::UnitStats
   unitName: Villager
+  description: 
+  role: 4
   unitSpace: 1
-  creationCosts: 32000000000000000000000000000000
-  trainingTime: 0
+  trainingTime: 10
   statsPerEra:
   - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
     health: 50
