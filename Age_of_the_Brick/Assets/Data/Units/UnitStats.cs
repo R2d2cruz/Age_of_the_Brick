@@ -1,44 +1,119 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Defines the global configuration of a unit type, including its evolution
-/// across eras, general data, and optional visual variations.
+/// Defines the strategic role of a unit for UI presentation and AI behavior.
+/// </summary>
+public enum UnitRole
+{
+    Frontline,
+    Skirmisher,
+    Healer,
+    Siege,
+    Worker,
+    Hero
+}
+
+/// <summary>
+/// Defines the global configuration of a unit type, including its progression
+/// through different eras, gameplay data, and optional visual evolution.
 /// </summary>
 [CreateAssetMenu(fileName = "NewUnitStats", menuName = "AgeOfTheBrick/Unit Stats")]
 public class UnitStats : ScriptableObject
 {
     // -------------------------
-    // GENERAL INFO
+    // GENERAL INFORMATION
     // -------------------------
+
     [Header("General Info")]
-    [Tooltip("The display name of this unit type.")]
+
+    /// <summary>
+    /// Display name of the unit shown in the user interface.
+    /// </summary>
+    [Tooltip("Display name of the unit.")]
     public string unitName;
 
-    [Tooltip("Required space.")]
+    // -------------------------
+    // DESCRIPTION
+    // -------------------------
+
+    [Header("Description")]
+
+    /// <summary>
+    /// Description of the unit displayed in the user interface.
+    /// Provides information about its purpose and characteristics.
+    /// </summary>
+    [Tooltip("Description of the unit.")]
+    public string description = "";
+
+    /// <summary>
+    /// Strategic role used to categorize the unit for gameplay,
+    /// UI presentation, and AI decision-making.
+    /// </summary>
+    [Tooltip("Strategic role of the unit (e.g., Frontline, Siege, Healer).")]
+    public UnitRole role;
+
+    /// <summary>
+    /// Population space required to create and maintain this unit.
+    /// </summary>
+    [Tooltip("Required population space.")]
     public float unitSpace;
 
-    [Header("Cost")]
-    [Tooltip("Creation costs for the unit (array of 4 resources).")]
-    public int[] creationCosts = new int[5];
+    // -------------------------
+    // COST
+    // -------------------------
 
-    [Header("Training time")]
-    [Tooltip("Training time for the unit.")]
+    [Header("Cost")]
+
+    /// <summary>
+    /// Resources required to create the unit.
+    /// Each entry represents a resource type and its corresponding cost.
+    /// </summary>
+    [Tooltip("Resources required to create this unit.")]
+    public Dictionary<ResourceType, int> creationCosts;
+
+    // -------------------------
+    // TRAINING
+    // -------------------------
+
+    [Header("Training Time")]
+
+    /// <summary>
+    /// Time required to train the unit.
+    /// </summary>
+    [Tooltip("Time required to train the unit.")]
     public int trainingTime;
 
     // -------------------------
     // ERA PROGRESSION
     // -------------------------
+
     [Header("Era Progression")]
-    [Tooltip("List of stats for each era (e.g. array size = number of eras).")]
-    public EraStats[] statsPerEra; // Example: size 5 if there are 5 eras
+
+    /// <summary>
+    /// Stat configuration for each available era.
+    /// Each element defines the unit's attributes for a specific era.
+    /// </summary>
+    [Tooltip("Stats configuration for each available era.")]
+    public EraStats[] statsPerEra;
 
     // -------------------------
     // VISUAL EVOLUTION
     // -------------------------
-    [Header("Visual / Evolution")]
-    [Tooltip("If true, the unit changes its visual model as it evolves through eras.")]
+
+    [Header("Visual Evolution")]
+
+    /// <summary>
+    /// Determines whether the unit changes its appearance
+    /// as it progresses through different eras.
+    /// </summary>
+    [Tooltip("Determines whether the unit changes its appearance between eras.")]
     public bool hasVisualEvolution = false;
 
-    [Tooltip("Optional prefabs for each era if the mesh or animation changes.")]
+    /// <summary>
+    /// Optional prefab variants used for each era.
+    /// These are only used when visual evolution is enabled.
+    /// </summary>
+    [Tooltip("Optional prefab for each era.")]
     public GameObject[] prefabsPerEra;
 }
