@@ -43,7 +43,7 @@ public class Building : Selectable
         ownerPlayerId = owner.playerId;
         UpdateStats(owner.CurrentEra);
 
-        if (currentHealth <= 0) currentHealth = currentStats.vida;
+        if (currentHealth <= 0) currentHealth = currentStats.health;
 
         owner.Registry.RegisterBuilding(this);
     }
@@ -51,20 +51,20 @@ public class Building : Selectable
     public void UpdateStats(int era)
     {
         EraStatsBuilding oldStats = currentStats;
-        currentStats = stats.statsPorEra[era];
+        currentStats = stats.statsPerEra[era];
 
-        if (oldStats != null && oldStats.vida > 0)
+        if (oldStats != null && oldStats.health > 0)
         {
-            float porcentaje = currentHealth / oldStats.vida;
-            currentHealth = Mathf.Clamp(currentStats.vida * porcentaje, 0f, currentStats.vida);
+            float porcentaje = currentHealth / oldStats.health;
+            currentHealth = Mathf.Clamp(currentStats.health * porcentaje, 0f, currentStats.health);
         }
         else
         {
-            currentHealth = currentStats.vida;
+            currentHealth = currentStats.health;
         }
     }
 
-    public float GetMaxVida() => currentStats.vida;
+    public float GetMaxVida() => currentStats.health;
 
     public bool IsFullyBuilt()
     {
@@ -73,8 +73,8 @@ public class Building : Selectable
 
     public void TakeDamage(int dmgLigero, int dmgPesado)
     {
-        int finalDamage = Mathf.Max(0, dmgLigero - currentStats.defensaLigera) +
-                          Mathf.Max(0, dmgPesado - currentStats.defensaPesada);
+        int finalDamage = Mathf.Max(0, dmgLigero - currentStats.lightDefense) +
+                          Mathf.Max(0, dmgPesado - currentStats.heavyDefense);
 
         currentHealth -= finalDamage;
         if (currentHealth <= 0)
