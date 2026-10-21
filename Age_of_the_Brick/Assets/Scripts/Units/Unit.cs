@@ -132,6 +132,27 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
         currentActiveCommands = subMenuCommands;
         UICommandController.Instance?.RefreshGrid();
     }
+
+    /// <summary>
+    /// Stops the current action and returns the unit
+    /// to its idle state.
+    /// </summary>
+    public virtual void Stop()
+    {
+        ChangeState(idleState);
+    }
+
+    /// <summary>
+    /// Applies total current health as damage to kill the unit.
+    /// </summary>
+    public virtual void ExecuteSelfDestruct()
+    {
+        if (state == SelectableState.Dead) return;
+
+        // Apply total max health in light/heavy damage to guarantee destruction
+        TakeDamage(currentStats.health + currentStats.lightDefense, currentStats.health + currentStats.heavyDefense);
+    }
+
     /// <summary>
     /// Gets the effective interaction range of the unit based on its current stats.
     /// Follows the same range pattern as combat attack distances.
