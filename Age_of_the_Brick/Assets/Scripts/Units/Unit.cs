@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 public enum UnitBehaviourState
 {
@@ -16,7 +17,7 @@ public enum UnitBehaviourState
 /// Inherits from <see cref="Selectable"/>, allowing player interaction (selection, commands).
 /// Controls movement, combat, animations, and health UI.
 /// </summary>
-public class Unit : Selectable
+public class Unit : Selectable, IActionProvider, ISubMenuHandler
 {
     // ============================================================
     // GENERAL CONFIGURATION
@@ -77,6 +78,60 @@ public class Unit : Selectable
     protected UnitState moveState;
     protected UnitState attackState;
 
+    [Header("Command Asset Lists")]
+    [SerializeField] private List<CommandSO> mainCommands;
+    [SerializeField] private CommandSO backCommandAsset; // Asset for "Back" button
+    private List<CommandSO> currentActiveCommands;
+
+    /// <summary>
+    /// Returns the list of actions available for this unit based on its current menu state.
+    /// </summary>
+    public virtual List<CommandAction> GetAvailableActions()
+    {
+        List<CommandAction> runtimeActions = new List<CommandAction>();
+
+        // Build runtime actions for current active menu
+        foreach (CommandSO cmdSO in currentActiveCommands)
+        {
+            if (cmdSO != null && cmdSO.ShouldDisplayAction(this))
+            {
+                runtimeActions.Add(cmdSO.CreateRuntimeAction(this));
+            }
+        }
+
+        // If in a submenu, append the "Back" action automatically at slot 11
+        if (currentActiveCommands != mainCommands && backCommandAsset != null)
+        {
+            CommandAction backAction = backCommandAsset.CreateRuntimeAction(this);
+            //backAction.actionCallback = ReturnToMainMenu;
+            runtimeActions.Add(backAction);
+        }
+
+        return runtimeActions;
+    }
+
+    /// <summary>
+    /// Returns the command panel to the main command set
+    /// and refreshes the user interface.
+    /// </summary>
+    public void ReturnToMainMenu()
+    {
+        currentActiveCommands = mainCommands;
+        UICommandController.Instance?.RefreshGrid();
+    }
+
+    /// <summary>
+    /// Switches the current command panel to a submenu
+    /// and refreshes the user interface.
+    /// </summary>
+    /// <param name="subMenuCommands">
+    /// Collection of commands that will be displayed in the submenu.
+    /// </param>
+    public void OpenSubMenu(List<CommandSO> subMenuCommands)
+    {
+        currentActiveCommands = subMenuCommands;
+        UICommandController.Instance?.RefreshGrid();
+    }
     /// <summary>
     /// Gets the effective interaction range of the unit based on its current stats.
     /// Follows the same range pattern as combat attack distances.
@@ -136,6 +191,7 @@ public class Unit : Selectable
         idleState = CreateIdleState();
         moveState = CreateMoveState();
         attackState = CreateAttackState();
+        currentActiveCommands = mainCommands;
     }
 
     // ============================================================
@@ -378,6 +434,11 @@ public class Unit : Selectable
         currentState = newState;
         currentState?.Enter();
         SetBehaviourState(currentState.GetBehaviourState());
+        // If this unit is currently selected, refresh command grid so Stop button appears/disappears live
+        if (isSelected)
+        {
+            UICommandController.Instance?.RefreshGrid();
+        }
     }
 
     // ============================================================
