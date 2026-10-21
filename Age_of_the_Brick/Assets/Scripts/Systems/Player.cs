@@ -81,4 +81,22 @@ public class Player
     {
         return resources.TryGetValue(resourceType, out int amount) ? amount : 0;
     }
+
+    public bool HasResourcesForUnit(UnitStats stats)
+    {
+        foreach (ResourceType resource in stats.creationCosts.Keys) {
+            if (stats.creationCosts[resource] > resources[resource]) return false;
+        }
+
+        return true;
+    }
+
+    public bool HasResourcesForBuilding(BuildingStats stats)
+    {
+        foreach (ResourceType resource in stats.constructionCosts.Keys) {
+            if (stats.constructionCosts[resource] > resources[resource]) return false;
+        }
+
+        return true;
+    }
 }
