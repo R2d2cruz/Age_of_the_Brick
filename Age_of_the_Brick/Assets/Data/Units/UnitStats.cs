@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 /// <summary>
 /// Defines the strategic role of a unit for UI presentation and AI behavior.
@@ -70,7 +71,7 @@ public class UnitStats : ScriptableObject
     /// Each entry represents a resource type and its corresponding cost.
     /// </summary>
     [Tooltip("Resources required to create this unit.")]
-    public Dictionary<ResourceType, int> creationCosts;
+    public ResourceCostDictionary creationCosts = new();
 
     // -------------------------
     // TRAINING

@@ -16,6 +16,10 @@ MonoBehaviour:
   description: 
   role: 4
   unitSpace: 1
+  creationCosts:
+    entries:
+    - Key: 0
+      Value: 50
   trainingTime: 10
   statsPerEra:
   - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
@@ -103,4 +107,5 @@ MonoBehaviour:
     buildSpeed: 32
     gatherSpeed: 1.5
   hasVisualEvolution: 0
-  prefabsPerEra: []
+  prefabsPerEra:
+  - {fileID: 7945390084030730056, guid: 82e59a6702d87b54abb7d12591155b94, type: 3}
