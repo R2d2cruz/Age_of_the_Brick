@@ -1,10 +1,11 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
 /// Core class for all structures. Manages health, ownership, selection, and era updates.
 /// Capabilities (production, resource dropoff, defense) are handled by attached components.
 /// </summary>
-public class Building : Selectable
+public class Building : Selectable, IActionProvider
 {
     [Header("Config")]
     public BuildingStats stats;
@@ -17,6 +18,9 @@ public class Building : Selectable
     [SerializeField] public ResourceDropoff DropoffComponent;
     [SerializeField] public UnitProducer ProducerComponent;
     [SerializeField] public BuildingConstruction ConstructionComponent;
+
+    [Header("Command Asset Lists")]
+    [SerializeField] private List<CommandSO> mainCommands;
     private void Awake()
     {
         TryGetComponent(out DropoffComponent);
@@ -93,5 +97,32 @@ public class Building : Selectable
     {
         if (Owner != null)
             Owner.Registry.UnregisterBuilding(this);
+    }
+
+    public virtual List<CommandAction> GetAvailableActions()
+    {
+        List<CommandAction> combinedActions = new List<CommandAction>();
+
+        // Build runtime actions for current active menu
+        foreach (CommandSO cmdSO in mainCommands)
+        {
+            if (cmdSO != null && cmdSO.ShouldDisplayAction(this))
+            {
+                combinedActions.Add(cmdSO.CreateRuntimeAction(this));
+            }
+        }
+
+        // Busca todos los componentes adjuntos que ofrezcan acciones (UnitProducer, TechResearcher, etc.)
+        IActionProvider[] modules = GetComponents<IActionProvider>();
+
+        foreach (var module in modules)
+        {
+            // Evita autoreferenciarse si Building implementa la interfaz
+            if (module == (IActionProvider)this) continue;
+
+            combinedActions.AddRange(module.GetAvailableActions());
+        }
+
+        return combinedActions;
     }
 }
