@@ -74,6 +74,17 @@ MonoBehaviour:
   meshesToRecolor: []
   state: 0
   stats: {fileID: 11400000, guid: 02c996c56ed85dd49a9888984995fa45, type: 2}
+  currentStats:
+    image: {fileID: 0}
+    health: 0
+    lightDefense: 0
+    heavyDefense: 0
+    visionRange: 0
+    gridSize: {x: 2, y: 2}
+    garrisonCapacity: 0
+    attackRange: 0
+    lightAttack: 0
+    heavyAttack: 0
   DropoffComponent: {fileID: 6482829651073818506}
   ProducerComponent: {fileID: 0}
   ConstructionComponent: {fileID: 0}

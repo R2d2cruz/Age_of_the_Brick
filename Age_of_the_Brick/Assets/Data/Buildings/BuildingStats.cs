@@ -51,7 +51,7 @@ public class BuildingStats : ScriptableObject
     /// Each entry represents a resource type and its corresponding cost.
     /// </summary>
     [Tooltip("Resources required to construct this building.")]
-    public Dictionary<ResourceType, int> constructionCosts;
+    public ResourceCostDictionary constructionCosts;
 
     // -------------------------
     // CONSTRUCTION

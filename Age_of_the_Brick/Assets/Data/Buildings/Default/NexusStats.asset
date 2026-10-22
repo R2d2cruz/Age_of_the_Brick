@@ -15,6 +15,10 @@ MonoBehaviour:
   buildingName: Nexos
   description: Nexo de recursos
   populationProvided: 0
+  constructionCosts:
+    entries:
+    - Key: 0
+      Value: 20
   buildTime: 0
   statsPerEra:
   - image: {fileID: 21300000, guid: 1829b759cac1f4a40aed838b2e739bfe, type: 3}
@@ -25,6 +29,8 @@ MonoBehaviour:
     gridSize: {x: 16, y: 16}
     garrisonCapacity: 0
     attackRange: 0
-    attackDamage: 0
+    lightAttack: 0
+    heavyAttack: 0
   hasVisualEvolution: 0
-  prefabsPerEra: []
+  prefabsPerEra:
+  - {fileID: 477284491252019083, guid: e257826e9e126474c986363773c06d68, type: 3}
