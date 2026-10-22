@@ -85,29 +85,17 @@ public class Villager : Unit
 
     protected void PlayCutAnimation()
     {
-        if (animator != null)
-        {
-            animator.SetBool("cut", true);
-            animator.SetBool("isMoving", false);
-        }
+        ChangeAnimtion("cut");
     }
 
     protected void PlayMinningAnimation()
     {
-        if (animator != null)
-        {
-            animator.SetBool("mine", true);
-            animator.SetBool("isMoving", false);
-        }
+        ChangeAnimtion("mine");
     }
 
     protected void PlayFarmingAnimation()
     {
-        if (animator != null)
-        {
-            animator.SetBool("farm", true);
-            animator.SetBool("isMoving", false);
-        }
+        ChangeAnimtion("farm");
     }
 
     /// <summary>

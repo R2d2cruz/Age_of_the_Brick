@@ -3,6 +3,7 @@ using UnityEngine.AI;
 using System.Collections;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using System;
 
 public enum UnitBehaviourState
 {
@@ -27,6 +28,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     public UnitStats stats;                 // ScriptableObject containing per-era stats.
     public EraStats currentStats;           // Active stats depending on the current era.
     protected Animator animator;              // Animation controller.
+    protected String currentAnimation = "idle";
     private NavMeshAgent agent;             // Navigation and pathfinding agent.
     private Renderer rend;                  // Main model renderer.
 
@@ -475,27 +477,26 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     // ANIMATIONS
     // ============================================================
 
-    public virtual void PlayIdleAnimation()
+    protected void ChangeAnimtion(String newAnim)
     {
-        animator?.SetBool("isMoving", false);
+        animator?.SetBool(currentAnimation, false);
+        currentAnimation = newAnim;
+        animator?.SetBool(currentAnimation, true);
     }
 
-    public void PlayWalkAnimation()
+    public virtual void PlayIdleAnimation()
     {
-        if (animator != null)
-        {
-            animator.SetBool("attack", false);
-            animator.SetBool("isMoving", true);
-        }
+        ChangeAnimtion("idle");
+    }
+
+    public virtual void PlayWalkAnimation()
+    {
+        ChangeAnimtion("isMoving");
     }
 
     protected virtual void PlayAttackAnimation()
     {
-        if (animator != null)
-        {
-            animator.SetBool("attack", true);
-            animator.SetBool("isMoving", false);
-        }
+        ChangeAnimtion("attack");
     }
 
     // ============================================================
