@@ -84,6 +84,7 @@ public class Player
 
     public bool HasResourcesForUnit(UnitStats stats)
     {
+        if (stats.creationCosts.Count == 0 || stats.creationCosts.Count > resources.Count) return false;
         foreach (ResourceType resource in stats.creationCosts.Keys) {
             if (stats.creationCosts[resource] > resources[resource]) return false;
         }
@@ -93,10 +94,25 @@ public class Player
 
     public bool HasResourcesForBuilding(BuildingStats stats)
     {
+        if (stats.constructionCosts.Count == 0 || stats.constructionCosts.Count > resources.Count) return false;
         foreach (ResourceType resource in stats.constructionCosts.Keys) {
             if (stats.constructionCosts[resource] > resources[resource]) return false;
         }
 
         return true;
+    }
+
+    public void UseResources(Dictionary<ResourceType, int> resourcesForUse)
+    {
+        foreach (ResourceType resource in resourcesForUse.Keys) {
+            resources[resource] -= resourcesForUse[resource];
+        }
+    }
+
+    public void RefundResources(Dictionary<ResourceType, int> resourcesForUse)
+    {
+        foreach (ResourceType resource in resourcesForUse.Keys) {
+            resources[resource] += resourcesForUse[resource];
+        }
     }
 }

@@ -264,7 +264,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
         Owner = owner;
         ownerPlayerId = owner.playerId;
         SubscribeToOwner();
-        UpdateStats(owner.CurrentEra);
+        HandleEraChange(owner.CurrentEra);
 
         if (currentHealth <= 0)
             currentHealth = currentStats.health;
