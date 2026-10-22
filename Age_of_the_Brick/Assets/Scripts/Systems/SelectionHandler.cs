@@ -4,41 +4,85 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
 
+/// <summary>
+/// Handles unit and building selection using mouse clicks and drag-box selection.
+/// Maintains the current selection state and notifies interested systems when
+/// the selection changes.
+/// </summary>
 public class SelectionHandler : MonoBehaviour
 {
+    /// <summary>
+    /// Singleton instance of the selection handler.
+    /// </summary>
     public static SelectionHandler Instance { get; private set; }
 
-    [Header("Selección con Click")]
+    [Header("Click Selection")]
+
+    /// <summary>
+    /// Layer mask used to detect selectable entities.
+    /// </summary>
     [SerializeField] private LayerMask selectableMask;
 
-    [Header("Selección con Drag Box")]
+    [Header("Drag Selection")]
+
+    /// <summary>
+    /// UI element used to display the drag selection rectangle.
+    /// </summary>
     [SerializeField] private RectTransform selectionBoxUI;
 
     [Header("Debug")]
+
+    /// <summary>
+    /// Enables additional debug logging.
+    /// </summary>
     [SerializeField] private bool debugLogs = false;
 
-    private RTSInputActions inputActions;
+    /// <summary>
+    /// Initial mouse position when starting a selection.
+    /// </summary>
     private Vector2 startPos;
+
+    /// <summary>
+    /// Current or final mouse position during selection.
+    /// </summary>
     private Vector2 endPos;
 
+    /// <summary>
+    /// Collection of currently selected entities.
+    /// </summary>
     public List<Selectable> SelectedObjects { get; private set; } = new List<Selectable>();
 
-    // 🔔 Event for UI update notification
+    /// <summary>
+    /// Triggered whenever the selection changes.
+    /// Used by UI systems and gameplay controllers.
+    /// </summary>
     public event Action<List<Selectable>> OnSelectionChanged;
 
+    /// <summary>
+    /// Cached reference to the main camera.
+    /// </summary>
     private Camera mainCamera;
-    private Canvas parentCanvas;
-    [SerializeField] private int localPlayerId = 1; // 🔹 el jugador actual
 
+    /// <summary>
+    /// Parent canvas used to convert screen coordinates
+    /// into UI coordinates for the drag box.
+    /// </summary>
+    private Canvas parentCanvas;
+
+    /// <summary>
+    /// Identifier of the local player.
+    /// </summary>
+    [SerializeField] private int localPlayerId = 1;
+
+    /// <summary>
+    /// Cached reference to the local player.
+    /// </summary>
     private Player localPlayer;
 
     private void Awake()
     {
-        // Singleton pattern setup
         if (Instance == null)
-        {
             Instance = this;
-        }
         else
         {
             Destroy(gameObject);
@@ -46,7 +90,6 @@ public class SelectionHandler : MonoBehaviour
         }
 
         mainCamera = Camera.main;
-        inputActions = new RTSInputActions();
 
         if (selectionBoxUI != null)
         {
@@ -77,36 +120,104 @@ public class SelectionHandler : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Updates local player references when ownership changes.
+    /// </summary>
+    /// <param name="newLocalPlayer">
+    /// Newly assigned local player.
+    /// </param>
     private void HandleLocalPlayerChanged(Player newLocalPlayer)
     {
         localPlayer = newLocalPlayer;
         localPlayerId = newLocalPlayer.playerId;
     }
 
+    /// <summary>
+    /// Subscribes to input events used for unit and building selection.
+    /// </summary>
     private void OnEnable()
     {
-        inputActions.Enable();
-        inputActions.Gameplay.LeftClick.started += ctx => OnLeftClickDown();
-        inputActions.Gameplay.LeftClick.canceled += ctx => OnLeftClickUp();
+        if (InputManager.Instance == null)
+            return;
+
+        var gameplay = InputManager.Instance.Actions.Gameplay;
+
+        gameplay.LeftClick.started += OnLeftClickStarted;
+        gameplay.LeftClick.canceled += OnLeftClickCanceled;
     }
 
+    /// <summary>
+    /// Unsubscribes from selection input events.
+    /// </summary>
     private void OnDisable()
     {
-        inputActions.Gameplay.LeftClick.started -= ctx => OnLeftClickDown();
-        inputActions.Gameplay.LeftClick.canceled -= ctx => OnLeftClickUp();
-        inputActions.Disable();
+        if (InputManager.Instance == null)
+            return;
+
+        var gameplay = InputManager.Instance.Actions.Gameplay;
+
+        gameplay.LeftClick.started -= OnLeftClickStarted;
+        gameplay.LeftClick.canceled -= OnLeftClickCanceled;
     }
 
+    /// <summary>
+    /// Triggered when the left mouse button is pressed.
+    /// Begins a click or drag selection operation.
+    /// </summary>
+    /// <param name="ctx">
+    /// Input callback context provided by the Unity Input System.
+    /// </param>
+    private void OnLeftClickStarted(InputAction.CallbackContext ctx)
+    {
+        OnLeftClickDown();
+    }
+
+    /// <summary>
+    /// Triggered when the left mouse button is released.
+    /// Completes the current click or drag selection operation.
+    /// </summary>
+    /// <param name="ctx">
+    /// Input callback context provided by the Unity Input System.
+    /// </param>
+    private void OnLeftClickCanceled(InputAction.CallbackContext ctx)
+    {
+        OnLeftClickUp();
+    }
+
+    /// <summary>
+    /// Begins a click or drag selection operation.
+    /// </summary>
     private void OnLeftClickDown()
     {
-        startPos = inputActions.Gameplay.MousePos.ReadValue<Vector2>();
-        if (selectionBoxUI != null) selectionBoxUI.gameObject.SetActive(true);
+        // Ignore selection while placing a building.
+        if (BuildingPlacementHandler.Instance != null &&
+            BuildingPlacementHandler.Instance.IsPlacing)
+            return;
+
+        startPos = InputManager.Instance.GetMousePosition();
+
+        if (selectionBoxUI != null)
+            selectionBoxUI.gameObject.SetActive(true);
     }
 
+    /// <summary>
+    /// Completes a click or drag selection operation.
+    /// </summary>
     private void OnLeftClickUp()
     {
-        endPos = inputActions.Gameplay.MousePos.ReadValue<Vector2>();
-        if (selectionBoxUI != null) selectionBoxUI.gameObject.SetActive(false);
+        if (BuildingPlacementHandler.Instance != null &&
+            BuildingPlacementHandler.Instance.IsPlacing)
+        {
+            if (selectionBoxUI != null)
+                selectionBoxUI.gameObject.SetActive(false);
+
+            return;
+        }
+
+        endPos = InputManager.Instance.GetMousePosition();
+
+        if (selectionBoxUI != null)
+            selectionBoxUI.gameObject.SetActive(false);
 
         if (Vector2.Distance(endPos, startPos) < 10f)
         {
@@ -118,23 +229,26 @@ public class SelectionHandler : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Processes a single-click selection.
+    /// Attempts to select the closest selectable object
+    /// under the mouse cursor.
+    /// </summary>
+    /// <param name="clickPos">
+    /// Mouse position in screen coordinates.
+    /// </param>
     private void HandleSingleClick(Vector2 clickPos)
     {
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
-        {
-            if (debugLogs) Debug.Log("Click sobre UI, ignorado.");
             return;
-        }
 
         Ray ray = mainCamera.ScreenPointToRay(clickPos);
 
-        // 1) Raycast using selectableMask
         if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, selectableMask.value, QueryTriggerInteraction.Collide))
         {
             Selectable selectable = hit.collider.GetComponentInParent<Selectable>();
             if (selectable != null)
             {
-                if (debugLogs) Debug.Log($"Raycast (mask) hit: {hit.collider.name} -> seleccionando {selectable.name}");
                 ClearSelection();
                 AddToSelection(selectable);
                 NotifySelectionChanged();
@@ -142,36 +256,37 @@ public class SelectionHandler : MonoBehaviour
             }
         }
 
-        // 2) Fallback RaycastAll
         RaycastHit[] hits = Physics.RaycastAll(ray, Mathf.Infinity, ~0, QueryTriggerInteraction.Collide);
         float closestDist = Mathf.Infinity;
         Selectable closestSelectable = null;
 
         foreach (var h in hits)
         {
-            var s = h.collider.GetComponentInParent<Selectable>();
-            if (s != null && h.distance < closestDist)
+            var selectable = h.collider.GetComponentInParent<Selectable>();
+
+            if (selectable != null && h.distance < closestDist)
             {
                 closestDist = h.distance;
-                closestSelectable = s;
+                closestSelectable = selectable;
             }
         }
 
         if (closestSelectable != null)
         {
-            if (debugLogs) Debug.Log($"RaycastAll found selectable: {closestSelectable.name} (dist {closestDist})");
             ClearSelection();
             AddToSelection(closestSelectable);
             NotifySelectionChanged();
             return;
         }
 
-        // 3) Ground click: Clear selection
-        if (debugLogs) Debug.Log("Click en vacío -> ClearSelection()");
         ClearSelection();
         NotifySelectionChanged();
     }
 
+    /// <summary>
+    /// Processes drag-box selection and selects all valid units
+    /// inside the screen-space rectangle.
+    /// </summary>
     private void HandleDragSelection()
     {
         if (localPlayer == null)
@@ -194,16 +309,22 @@ public class SelectionHandler : MonoBehaviour
 
     private void Update()
     {
-        if (localPlayer != null)
-            localPlayer.Update(Time.deltaTime);
-
-        if (inputActions.Gameplay.LeftClick.IsPressed())
+        if (InputManager.Instance != null &&
+            InputManager.Instance.Actions.Gameplay.LeftClick.IsPressed())
         {
-            endPos = inputActions.Gameplay.MousePos.ReadValue<Vector2>();
+            // Ignore selection box updates while placing a building.
+            if (BuildingPlacementHandler.Instance != null &&
+                BuildingPlacementHandler.Instance.IsPlacing)
+                return;
+
+            endPos = InputManager.Instance.GetMousePosition();
             UpdateSelectionBox();
         }
     }
 
+    /// <summary>
+    /// Updates the visual drag-selection rectangle.
+    /// </summary>
     private void UpdateSelectionBox()
     {
         if (selectionBoxUI == null || parentCanvas == null) return;
@@ -227,6 +348,12 @@ public class SelectionHandler : MonoBehaviour
         selectionBoxUI.sizeDelta = size;
     }
 
+    /// <summary>
+    /// Adds a selectable entity to the current selection.
+    /// </summary>
+    /// <param name="selectable">
+    /// Entity to be selected.
+    /// </param>
     private void AddToSelection(Selectable selectable)
     {
         if (!SelectedObjects.Contains(selectable))
@@ -236,6 +363,9 @@ public class SelectionHandler : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Clears the current selection and deselects all entities.
+    /// </summary>
     private void ClearSelection()
     {
         foreach (var obj in SelectedObjects)
@@ -245,6 +375,9 @@ public class SelectionHandler : MonoBehaviour
         SelectedObjects.Clear();
     }
 
+    /// <summary>
+    /// Notifies all listeners that the current selection has changed.
+    /// </summary>
     public void NotifySelectionChanged()
     {
         OnSelectionChanged?.Invoke(SelectedObjects);
