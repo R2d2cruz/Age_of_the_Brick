@@ -115,7 +115,7 @@ public class UISelectionStatsPanel : MonoBehaviour
 
                 if (attackText != null) attackText.text = totalAttack.ToString();
                 if (defenseText != null) defenseText.text = totalDefense.ToString();
-                if (rangeText != null) {rangeText.text = unit.currentStats.visionRange.ToString() + (unit.currentStats.range > 1 ? " / " + unit.currentStats.range.ToString() : "");}
+                if (rangeText != null) { rangeText.text = unit.currentStats.visionRange.ToString() + (unit.currentStats.range > 1 ? " / " + unit.currentStats.range.ToString() : ""); }
                 if (speedText != null) speedText.text = unit.currentStats.moveSpeed.ToString();
             }
         }
@@ -133,9 +133,11 @@ public class UISelectionStatsPanel : MonoBehaviour
             {
                 portraitImage.gameObject.SetActive(false);
             }
+            int totalAttack = building.currentStats.lightAttack + building.currentStats.heavyAttack;
+            int totalDefense = building.currentStats.lightDefense + building.currentStats.heavyDefense;
 
-            if (attackText != null) attackText.text = "-";
-            if (defenseText != null) defenseText.text = "-";
+            if (attackText != null) attackText.text = totalAttack > 0 ? totalAttack.ToString() : "";
+            if (defenseText != null) defenseText.text = totalDefense > 0 ? totalDefense.ToString() : "";
             if (rangeText != null) rangeText.text = "-";
             if (speedText != null) speedText.text = "-";
         }
@@ -165,7 +167,7 @@ public class UISelectionStatsPanel : MonoBehaviour
 
         if (healthText != null)
         {
-            healthText.text = $"{Mathf.CeilToInt(currentHp)} / {Mathf.CeilToInt(maxHp)}";
+            healthText.text = $"{Mathf.Max(Mathf.CeilToInt(currentHp), 0)} / {Mathf.CeilToInt(maxHp)}";
         }
 
         if (healthBarFill != null)
