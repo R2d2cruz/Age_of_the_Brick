@@ -35,9 +35,16 @@ public class Villager : Unit
     public Vector3 LastResourcePosition => lastResourcePosition;
     public int ExtractionAmountPerCycle => extractionAmountPerCycle;
 
-    public void StartPlacingBuilding(BuildingStats stats)
+    /// <summary>
+    /// Tells the Placement Handler to start the ghost placement mode.
+    /// </summary>
+    public void StartPlacingBuilding(BuildingStats buildingStats)
     {
-        // Spawns building ghost and initiates placement logic[cite: 1]
+        Player owner = PlayerManager.Instance.GetPlayer(ownerPlayerId);
+        if (owner != null)
+        {
+            BuildingPlacementHandler.Instance.BeginPlacement(buildingStats, this, owner.CurrentEra);
+        }
     }
 
     // -------------------------
