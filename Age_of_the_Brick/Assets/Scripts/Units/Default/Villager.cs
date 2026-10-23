@@ -19,6 +19,10 @@ public class Villager : Unit
     [SerializeField] private int maxCarryCapacity = 10;
     [SerializeField] private int extractionAmountPerCycle = 2;
 
+    [Header("Build Settings")]
+    protected UnitState buildState;
+    public Building targetBuilding { get; private set; }
+
     [Header("Gathering Runtime Data")]
     private int currentCarriedAmount;
     private Resource targetResource;
@@ -54,12 +58,18 @@ public class Villager : Unit
     {
         base.Start();
         gatherState = CreateGatherState();
+        buildState = CreateBuildState();
         HideAllTools();
     }
 
     protected virtual UnitState CreateGatherState()
     {
         return new VillagerGatherState(this);
+    }
+
+    protected virtual UnitState CreateBuildState()
+    {
+        return new VillagerBuildState(this);
     }
 
     /// <summary>
@@ -71,6 +81,7 @@ public class Villager : Unit
         if (animator != null)
         {
             animator.SetFloat("gatherSpeedMultiplier", currentStats.gatherSpeed);
+            animator.SetFloat("buildSpeed", currentStats.buildSpeed);
         }
     }
 
@@ -105,6 +116,12 @@ public class Villager : Unit
         ChangeAnimtion("farm");
     }
 
+    public void PlayBuildAnimation()
+    {
+        ChangeAnimtion("build");
+        HideAllTools();
+    }
+
     /// <summary>
     /// Evaluates context-sensitive player commands targeting resources, buildings, or enemy entities.
     /// </summary>
@@ -125,11 +142,13 @@ public class Villager : Unit
         // 2. Interaction with Allied Buildings (Construction or Repair)
         else if (target.CompareTag("Building") && !target.IsEnemyTo(ownerPlayerId))
         {
-            /* Building building = target.GetComponent<Building>();
+            Building building = target.GetComponent<Building>();
+            // Si el edificio no está terminado, ir a construirlo
             if (building != null && !building.IsFullyBuilt)
             {
                 StartBuilding(building);
-            } */
+                return;
+            }
         }
         // 3. Fallback to base Unit command execution (e.g. attacking enemy units)
         else
@@ -184,6 +203,14 @@ public class Villager : Unit
     public void EmptyCarriedResources()
     {
         currentCarriedAmount = 0;
+    }
+
+    public void StartBuilding(Building building)
+    {
+        if (building == null || building.IsFullyBuilt) return;
+
+        targetBuilding = building;
+        ChangeState(buildState);
     }
 
     // -------------------------
@@ -371,6 +398,76 @@ public class Villager : Unit
                 {
                     minDistance = dist;
                     nearest = resource;
+                }
+            }
+        }
+
+        return nearest;
+    }
+
+    #endregion
+
+    #region Build Logic
+
+    /// <summary>
+    /// Invoked by an Animation Event during the build animation.
+    /// </summary>
+    public void OnBuildHit()
+    {
+        if (targetBuilding == null || targetBuilding.IsFullyBuilt)
+            return;
+
+        // Implement sound feedback
+    }
+
+    /// <summary>
+    /// Finds the nearest allied building that is still under construction
+    /// within the specified search radius.
+    /// </summary>
+    /// <param name="originPosition">
+    /// Position from which the search is performed.
+    /// </param>
+    /// <param name="searchRadius">
+    /// Search radius in world units. If less than or equal to zero,
+    /// the unit's vision range will be used.
+    /// </param>
+    /// <returns>
+    /// The closest unfinished allied building, or null if none is found.
+    /// </returns>
+    public Building FindNearestUnbuiltBuilding(Vector3 originPosition, float searchRadius = -1f)
+    {
+        if (Owner == null || Owner.Registry == null)
+            return null;
+
+        if (searchRadius <= 0f)
+        {
+            searchRadius =
+                (currentStats != null && currentStats.visionRange > 0)
+                ? currentStats.visionRange
+                : 15f;
+        }
+
+        Building nearest = null;
+        float minDistance = float.MaxValue;
+
+        // Search all buildings owned by the player.
+        var playerBuildings = Owner.Registry.GetBuildings();
+
+        for (int i = 0; i < playerBuildings.Count; i++)
+        {
+            Building building = playerBuildings[i];
+
+            if (building != null && !building.IsFullyBuilt)
+            {
+                float distance = Vector3.Distance(
+                    originPosition,
+                    building.transform.position);
+
+                if (distance <= searchRadius &&
+                    distance < minDistance)
+                {
+                    minDistance = distance;
+                    nearest = building;
                 }
             }
         }
@@ -570,6 +667,159 @@ public class Villager : Unit
             else
             {
                 villager.Wait(); // Return cleanly to IdleState when no resources remain nearby
+            }
+        }
+
+        public override UnitBehaviourState GetBehaviourState() => UnitBehaviourState.Moving;
+    }
+
+    #endregion
+
+    #region Nested Build State Machine
+
+    protected class VillagerBuildState : UnitState
+    {
+        private enum BuildSubState { MovingToBuilding, Constructing }
+
+        private readonly Villager villager;
+        private readonly NavMeshAgent agent;
+        private BuildSubState currentSubState;
+        private float buildProgressAccumulator = 0f;
+
+        public VillagerBuildState(Villager unit) : base(unit)
+        {
+            villager = unit;
+            agent = villager.GetComponent<NavMeshAgent>();
+        }
+
+        public override void Enter()
+        {
+            base.Enter();
+            buildProgressAccumulator = 0f;
+            SetSubState(BuildSubState.MovingToBuilding);
+        }
+
+        public override void Tick()
+        {
+            base.Tick();
+
+            switch (currentSubState)
+            {
+                case BuildSubState.MovingToBuilding:
+                    HandleMoving();
+                    break;
+                case BuildSubState.Constructing:
+                    HandleConstructing();
+                    break;
+            }
+        }
+
+        private void SetSubState(BuildSubState newSubState)
+        {
+            currentSubState = newSubState;
+
+            if (currentSubState == BuildSubState.MovingToBuilding)
+            {
+                villager.HideAllTools();
+                if (villager.targetBuilding != null && agent != null)
+                {
+                    agent.isStopped = false;
+                    agent.SetDestination(villager.targetBuilding.transform.position);
+                    villager.PlayWalkAnimation();
+                }
+            }
+            else if (currentSubState == BuildSubState.Constructing)
+            {
+                if (agent != null) agent.isStopped = true;
+                villager.PlayBuildAnimation();
+            }
+        }
+
+        private void HandleMoving()
+        {
+            if (villager.targetBuilding == null || villager.targetBuilding.IsFullyBuilt)
+            {
+                TryFindAnotherBuilding();
+                return;
+            }
+
+            float surfaceDistance = villager.GetDistanceToTargetSurface(villager.targetBuilding);
+            if (surfaceDistance <= villager.GetInteractionRange())
+            {
+                SetSubState(BuildSubState.Constructing);
+            }
+        }
+
+        /// <summary>
+        /// Handles the active building process while the villager
+        /// is assigned to an unfinished structure.
+        /// </summary>
+        private void HandleConstructing()
+        {
+            if (villager.targetBuilding == null || villager.targetBuilding.IsFullyBuilt)
+            {
+                TryFindAnotherBuilding();
+                return;
+            }
+
+            Vector3 lookDir =
+                villager.targetBuilding.transform.position -
+                villager.transform.position;
+
+            lookDir.y = 0;
+
+            if (lookDir.sqrMagnitude > 0.001f)
+            {
+                villager.transform.rotation = Quaternion.Slerp(
+                    villager.transform.rotation,
+                    Quaternion.LookRotation(lookDir),
+                    Time.deltaTime * 10f);
+            }
+
+            if (villager.GetDistanceToTargetSurface(villager.targetBuilding) <=
+                villager.GetInteractionRange() + 0.2f)
+            {
+                float baseBuildHealth = (villager.currentStats != null)
+                        ? villager.currentStats.buildHealth : 10f;
+
+                float buildSpeedMultiplier = (villager.currentStats != null)
+                        ? villager.currentStats.buildSpeed : 1f;
+
+                // Accumulate fractional construction progress for this frame.
+                buildProgressAccumulator += baseBuildHealth *
+                    buildSpeedMultiplier * Time.deltaTime;
+
+                // Apply construction progress only when at least one full
+                // health point has been accumulated.
+                if (buildProgressAccumulator >= 1f)
+                {
+                    // Extract the integer portion of the accumulated progress.
+                    int healthPointsToAdd = Mathf.FloorToInt(buildProgressAccumulator);
+
+                    // Keep the remaining fractional progress for future frames.
+                    buildProgressAccumulator -= healthPointsToAdd;
+
+                    // Apply the accumulated construction progress.
+                    villager.targetBuilding.AddHealth(healthPointsToAdd);
+                }
+            }
+            else
+            {
+                SetSubState(BuildSubState.MovingToBuilding);
+            }
+        }
+
+        private void TryFindAnotherBuilding()
+        {
+            Building nextBuilding = villager.FindNearestUnbuiltBuilding(villager.transform.position);
+
+            if (nextBuilding != null)
+            {
+                villager.StartBuilding(nextBuilding);
+            }
+            else
+            {
+                villager.Wait();
             }
         }
 
