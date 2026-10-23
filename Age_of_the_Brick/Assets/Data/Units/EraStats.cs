@@ -106,11 +106,17 @@ public class EraStats
     public float healSpeed;
 
     /// <summary>
-    /// Construction progress contributed per second.
+    /// Animation speed multiplier applied while building or repairing structures.
+    /// </summary>
+    [Tooltip("Building animation speed multiplier.")]
+    public float buildSpeed;
+
+    /// <summary>
+    /// Amount of construction health contributed per build action.
     /// Used when building or repairing structures.
     /// </summary>
-    [Tooltip("Construction progress per second.")]
-    public float buildSpeed;
+    [Tooltip("Construction health restored per action.")]
+    public float buildHealth;
 
     /// <summary>
     /// Resource gathering rate per second.
