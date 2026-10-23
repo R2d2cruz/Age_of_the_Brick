@@ -619,11 +619,21 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     /// </summary>
     public virtual void OnAttackHit()
     {
-        if (attackTarget == null) return;
-        if (attackTarget.state == SelectableState.Dead) return;
+        if (attackTarget == null && attackTarget.state == SelectableState.Dead) return;
+    }
 
+    /// <summary>
+    /// Lógica pura de combate. Aplica daño directo en melee.
+    /// Unidades a distancia deben sobrescribir esto para instanciar proyectiles.
+    /// </summary>
+    protected virtual void ExecuteAttackLogic()
+    {
+        if (attackTarget == null || attackTarget.state == SelectableState.Dead) return;
+
+        // Validamos la distancia nuevamente por si el objetivo se movió en el último frame
         float distance = GetDistanceToTargetSurface(attackTarget);
         if (distance > GetInteractionRange()) return;
+
         attackTarget.TakeDamage(currentStats.lightAttack, currentStats.heavyAttack);
     }
 
@@ -761,14 +771,19 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
 
     protected class AttackingState : UnitState
     {
-        private float attackCooldown = 0;
+        private float attackTimer = 0f;
+        private const float BaseAnimationDuration = 1.05f;
         public AttackingState(Unit u) : base(u) { }
 
         public override void Enter()
         {
             unit.isAttacking = true;
             unit.SetBehaviourState(UnitBehaviourState.Attacking);
-            attackCooldown = 1f / Mathf.Max(0.0001f, unit.currentStats.attackSpeed);
+            // Iniciamos el temporizador en 0 para obligar a que pase el tiempo de la animación
+            attackTimer = 0f; 
+            
+            // Disparamos la animación al entrar al estado (asumiendo que está en loop continuo)
+            unit.PlayAttackAnimation();
         }
 
         public override void Tick()
@@ -795,6 +810,9 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
 
                 if (distanceToTarget > attackRange)
                 {
+                    // Reiniciamos el temporizador si el enemigo se aleja y tenemos que perseguirlo
+                    attackTimer = 0f; 
+                    
                     if (unit.agent != null)
                     {
                         unit.agent.isStopped = false;
@@ -804,23 +822,34 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
                 }
                 else
                 {
-                    // En rango: detenerse, rotar y atacar según cooldown
                     if (unit.agent != null) unit.agent.isStopped = true;
 
+                    // Rotación suave hacia el objetivo
                     Vector3 lookDir = unit.attackTarget.transform.position - unit.transform.position;
                     lookDir.y = 0;
                     if (lookDir.sqrMagnitude > 0.001f)
-                        unit.transform.rotation = Quaternion.LookRotation(lookDir);
+                    {
+                        unit.transform.rotation = Quaternion.Slerp(
+                            unit.transform.rotation,
+                            Quaternion.LookRotation(lookDir),
+                            Time.deltaTime * 10f
+                        );
+                    }
 
                     unit.SetBehaviourState(UnitBehaviourState.Attacking);
 
-                    attackCooldown -= Time.deltaTime;
-                    if (attackCooldown <= 0f)
-                    {
-                        // Reproduce la animación, y el evento dentro de ella llamará a OnAttackHit()
-                        unit.PlayAttackAnimation();
+                    // Avanzamos el temporizador lógico multiplicándolo por la velocidad de ataque
+                    float speedMultiplier = Mathf.Max(0.0001f, unit.currentStats.attackSpeed);
+                    attackTimer += Time.deltaTime * speedMultiplier;
 
-                        attackCooldown = 1f / Mathf.Max(0.0001f, unit.currentStats.attackSpeed);
+                    // Cuando el temporizador alcanza la duración de la animación (1.05s)
+                    if (attackTimer >= BaseAnimationDuration)
+                    {
+                        // Descontamos el tiempo en lugar de volver a 0 para no perder milisegundos residuales
+                        attackTimer -= BaseAnimationDuration;
+                        
+                        // ¡El golpe impacta lógicamente al final de la animación!
+                        unit.ExecuteAttackLogic(); 
                     }
                 }
             }
@@ -829,6 +858,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
         public override void Exit()
         {
             unit.isAttacking = false;
+            attackTimer = 0f;
             unit.animator?.SetBool("attack", false);
         }
 

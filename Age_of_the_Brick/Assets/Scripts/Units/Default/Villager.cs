@@ -485,7 +485,7 @@ public class Villager : Unit
         private readonly NavMeshAgent agent;
         private GatherSubState currentSubState;
         private float extractionTimer = 0;
-        private const float BaseTimeBetweenHits = 1.2f;
+        private const float BaseTimeBetweenHits = 1.05f;
 
         public VillagerGatherState(Villager unit) : base(unit)
         {
