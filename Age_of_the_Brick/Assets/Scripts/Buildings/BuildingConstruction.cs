@@ -30,7 +30,7 @@ public class BuildingConstruction : MonoBehaviour
         if (finished) return;
 
         building.currentHealth += hpPorSegundo * Time.deltaTime;
-        float progreso = Mathf.Clamp01(building.currentHealth / building.GetMaxVida());
+        float progreso = Mathf.Clamp01(building.currentHealth / building.GetMaxHealth());
 
         PlayConstructionAnimation(progreso);
 

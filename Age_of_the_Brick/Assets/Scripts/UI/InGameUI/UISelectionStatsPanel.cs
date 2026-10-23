@@ -162,7 +162,7 @@ public class UISelectionStatsPanel : MonoBehaviour
         else if (currentTrackedEntity is Building building)
         {
             currentHp = building.currentHealth;
-            maxHp = building.GetMaxVida();
+            maxHp = building.GetMaxHealth();
         }
 
         if (healthText != null)
