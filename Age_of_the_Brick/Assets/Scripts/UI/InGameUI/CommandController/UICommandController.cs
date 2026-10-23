@@ -149,6 +149,12 @@ public class UICommandController : MonoBehaviour
         // Clear all command slots.
         ClearGrid();
 
+        if (currentSelection == null || currentSelection.Count == 0)
+        {
+            HidePanel();
+            return;
+        }
+
         int activeLocalPlayerId = PlayerManager.Instance != null
             ? PlayerManager.Instance.GetLocalPlayerId()
             : localPlayer.playerId;
