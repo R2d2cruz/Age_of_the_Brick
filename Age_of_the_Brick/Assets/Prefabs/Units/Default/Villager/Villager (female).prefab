@@ -124,6 +124,7 @@ MonoBehaviour:
   mainCommands:
   - {fileID: 11400000, guid: 98991d603b27ebf468df9f81d6b5041b, type: 2}
   - {fileID: 11400000, guid: db9c00f17fbf0bd469473377700bd539, type: 2}
+  - {fileID: 11400000, guid: 9a8e4313f127ac34890715a7390eb665, type: 2}
   backCommandAsset: {fileID: 11400000, guid: 345e7407e7f52a44294e93f054865246, type: 2}
   axe: {fileID: 2564802241321890469}
   pickaxe: {fileID: 7622023273109300931}
