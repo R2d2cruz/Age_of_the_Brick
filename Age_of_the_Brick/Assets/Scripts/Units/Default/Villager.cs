@@ -165,12 +165,7 @@ public class Villager : Unit
     {
         if (targetResource == null || targetResource.GetQuantity() <= 0) return;
 
-        // Validate the distance to the target surface before applying the gathering
-        if (GetDistanceToTargetSurface(targetResource) > GetInteractionRange()) return;
-
-        // Extract and store
-        int extracted = targetResource.Extract(extractionAmountPerCycle);
-        AddCarriedResources(extracted);
+        // Add feedback
     }
 
     /// <summary>
@@ -489,7 +484,8 @@ public class Villager : Unit
         private readonly Villager villager;
         private readonly NavMeshAgent agent;
         private GatherSubState currentSubState;
-        private float extractionTimer;
+        private float extractionTimer = 0;
+        private const float BaseTimeBetweenHits = 1.2f;
 
         public VillagerGatherState(Villager unit) : base(unit)
         {
@@ -500,6 +496,7 @@ public class Villager : Unit
         public override void Enter()
         {
             base.Enter();
+            extractionTimer = 0f;
 
             if (villager.CurrentCarriedAmount >= villager.MaxCarryCapacity)
             {
@@ -590,21 +587,8 @@ public class Villager : Unit
         {
             if (villager.TargetResource == null || villager.TargetResource.GetQuantity() <= 0)
             {
-                if (villager.CurrentCarriedAmount > 0)
-                {
-                    SetSubState(GatherSubState.MovingToDropoff);
-                }
-                else
-                {
-                    TryRelocateResource();
-                }
-                return;
-            }
-
-            // If the inventory is full (modified by the Animation Event OnGatherHit)
-            if (villager.CurrentCarriedAmount >= villager.MaxCarryCapacity)
-            {
-                SetSubState(GatherSubState.MovingToDropoff);
+                if (villager.CurrentCarriedAmount > 0) SetSubState(GatherSubState.MovingToDropoff);
+                else TryRelocateResource();
                 return;
             }
 
@@ -618,6 +602,29 @@ public class Villager : Unit
                     Quaternion.LookRotation(lookDir),
                     Time.deltaTime * 10f
                 );
+            }
+
+            // 2. Lógica del Temporizador de Extracción
+            // Multiplicamos por la velocidad de recolección (así el timer avanza más rápido si hay mejoras)
+            float gatherSpeed = (villager.currentStats != null) ? villager.currentStats.gatherSpeed : 1f;
+            extractionTimer += Time.deltaTime * gatherSpeed;
+
+            // 3. ¿El temporizador superó el tiempo de un golpe?
+            if (extractionTimer >= BaseTimeBetweenHits)
+            {
+                // Restamos el tiempo en lugar de ponerlo en 0 para no perder precisión en los decimales
+                extractionTimer -= BaseTimeBetweenHits;
+
+                // ¡Golpe Lógico! Hacemos la extracción real de recursos
+                int extracted = villager.TargetResource.Extract(villager.ExtractionAmountPerCycle);
+                villager.AddCarriedResources(extracted);
+
+                // Si se llenó el inventario tras este golpe, ir a dejar los recursos
+                if (villager.CurrentCarriedAmount >= villager.MaxCarryCapacity)
+                {
+                    SetSubState(GatherSubState.MovingToDropoff);
+                    return;
+                }
             }
         }
 
