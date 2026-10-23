@@ -116,6 +116,7 @@ MonoBehaviour:
     buildingMultiplier: 0
     healSpeed: 0
     buildSpeed: 0
+    buildHealth: 0
     gatherSpeed: 0
   currentHealth: 0
   healthCanvasOffset: {x: 0, y: 4.2, z: 0}
@@ -144,7 +145,7 @@ Animator:
   m_Enabled: 1
   m_Avatar: {fileID: 9000000, guid: 264f8272e79533d4bad8c2cf2fffe45c, type: 3}
   m_Controller: {fileID: 9100000, guid: f7fe334b2d54a4e4daec935d4d8edf64, type: 2}
-  m_CullingMode: 0
+  m_CullingMode: 1
   m_UpdateMode: 0
   m_ApplyRootMotion: 1
   m_LinearVelocityBlending: 0
