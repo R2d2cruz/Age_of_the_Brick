@@ -1,48 +1,121 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.InputSystem; // Required for Keyboard.current
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// Handles the grid-based placement of buildings.
-/// Projects a ghost model on the ground, validates placement, and confirms construction.
+/// Projects a ghost model on the ground, validates placement,
+/// and confirms construction.
 /// </summary>
 public class BuildingPlacementHandler : MonoBehaviour
 {
+    /// <summary>
+    /// Singleton instance used to manage building placement.
+    /// </summary>
     public static BuildingPlacementHandler Instance { get; private set; }
 
     [Header("Grid Settings")]
+
+    /// <summary>
+    /// Size of a grid cell measured in studs.
+    /// </summary>
     [Tooltip("Size of each grid cell (e.g., 4 studs).")]
     [SerializeField] private float gridSize = 4f;
-    [Tooltip("Escala física en Unity: cuánto mide 1 stud en coordenadas del mundo (ej. 0.8).")]
+
+    /// <summary>
+    /// Physical world-space size represented by a single stud.
+    /// Used to convert logical grid dimensions into Unity units.
+    /// </summary>
+    [Tooltip("Physical size of one stud in world-space units.")]
     [SerializeField] private float studSize = 0.8f;
+
+    /// <summary>
+    /// Layer used to detect valid ground surfaces.
+    /// </summary>
     [SerializeField] private LayerMask groundLayer;
+
+    /// <summary>
+    /// Layer used to detect placement obstacles.
+    /// </summary>
     [SerializeField] private LayerMask obstacleLayer;
 
     [Header("Visuals")]
-    [Tooltip("Material used when placement is valid (Green Translucent).")]
+
+    /// <summary>
+    /// Material applied when the current placement location is valid.
+    /// </summary>
+    [Tooltip("Material used when placement is valid (green translucent).")]
     [SerializeField] private Material validMaterial;
-    [Tooltip("Material used when placement is blocked (Red Translucent).")]
+
+    /// <summary>
+    /// Material applied when the current placement location is invalid.
+    /// </summary>
+    [Tooltip("Material used when placement is blocked (red translucent).")]
     [SerializeField] private Material invalidMaterial;
 
+    /// <summary>
+    /// Building configuration currently being placed.
+    /// </summary>
     private BuildingStats currentStatsToBuild;
+
+    /// <summary>
+    /// Villager responsible for constructing the building.
+    /// </summary>
     private Villager currentBuilder;
+
+    /// <summary>
+    /// Current player era used to determine stats and visuals.
+    /// </summary>
     private int playerEra;
-    
+
+    /// <summary>
+    /// Ghost object displayed during placement.
+    /// </summary>
     private GameObject ghostInstance;
+
+    /// <summary>
+    /// Cached mesh renderers used to update placement visuals.
+    /// </summary>
     private MeshRenderer[] ghostRenderers;
+
+    /// <summary>
+    /// Indicates whether the current placement location is valid.
+    /// </summary>
     private bool isPlacementValid;
+
+    /// <summary>
+    /// Cached reference to the main camera.
+    /// </summary>
     private Camera mainCamera;
 
+    /// <summary>
+    /// Returns whether a building placement operation is currently active.
+    /// </summary>
     public bool IsPlacing => ghostInstance != null;
 
     private void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
-        
+        if (Instance == null)
+            Instance = this;
+        else
+            Destroy(gameObject);
+
         mainCamera = Camera.main;
     }
 
+    /// <summary>
+    /// Starts the building placement process.
+    /// Creates a ghost preview and prepares placement validation.
+    /// </summary>
+    /// <param name="stats">
+    /// Building definition to place.
+    /// </param>
+    /// <param name="builder">
+    /// Unit responsible for constructing the building.
+    /// </param>
+    /// <param name="era">
+    /// Current player era.
+    /// </param>
     public void BeginPlacement(BuildingStats stats, Villager builder, int era)
     {
         CancelPlacement();
@@ -52,26 +125,49 @@ public class BuildingPlacementHandler : MonoBehaviour
         playerEra = era;
 
         GameObject prefabToBuild = GetPrefabForEra(stats, era);
-        if (prefabToBuild == null) return;
 
-        ghostInstance = Instantiate(prefabToBuild);
-        
-        Destroy(ghostInstance.GetComponent<Building>());
-        Destroy(ghostInstance.GetComponent<BuildingConstruction>());
-        Destroy(ghostInstance.GetComponent<Collider>()); 
-        
+        if (prefabToBuild == null)
+            return;
+
+        // Retrieve the Building component from the prefab
+        // without instantiating the full object.
+        Building buildingScript = prefabToBuild.GetComponent<Building>();
+
+        // Instantiate only the final visual model used as the placement preview.
+        if (buildingScript != null && buildingScript.FinalMesh != null)
+        {
+            ghostInstance = Instantiate(buildingScript.FinalMesh);
+        }
+        else
+        {
+            // Fallback in case no final mesh has been assigned.
+            ghostInstance = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        }
+
+        // Disable all colliders on the ghost object.
+        foreach (Collider col in ghostInstance.GetComponentsInChildren<Collider>())
+        {
+            col.enabled = false;
+        }
+
         ghostRenderers = ghostInstance.GetComponentsInChildren<MeshRenderer>();
     }
 
+    /// <summary>
+    /// Updates the placement preview and handles confirmation
+    /// or cancellation input.
+    /// </summary>
     private void Update()
     {
-        if (!IsPlacing) return;
+        if (!IsPlacing)
+            return;
 
         var inputGameplay = InputManager.Instance.Actions.Gameplay;
 
-        // 1. Cancel placement on Right Click or Escape Key
-        // Fíjate en los paréntesis () al final de WasPressedThisFrame()
-        if (inputGameplay.RightClick.WasPressedThisFrame() || (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame))
+        // Cancel placement when the player presses
+        // the right mouse button or Escape.
+        if (inputGameplay.RightClick.WasPressedThisFrame() ||
+            (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame))
         {
             CancelPlacement();
             return;
@@ -79,57 +175,81 @@ public class BuildingPlacementHandler : MonoBehaviour
 
         UpdateGhostPositionAndValidation();
 
-        // 2. Confirm placement on Left Click
+        // Confirm placement when the left mouse button is pressed.
         if (inputGameplay.LeftClick.WasPressedThisFrame() && isPlacementValid)
         {
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+            if (EventSystem.current != null &&
+                EventSystem.current.IsPointerOverGameObject())
+                return;
+
             ConfirmPlacement();
         }
     }
 
+    /// <summary>
+    /// Updates the ghost position using grid snapping
+    /// and performs placement validation checks.
+    /// </summary>
     private void UpdateGhostPositionAndValidation()
     {
         Vector2 mousePos = InputManager.Instance.GetMousePosition();
         Ray ray = mainCamera.ScreenPointToRay(mousePos);
-        
+
         if (Physics.Raycast(ray, out RaycastHit hit, 1000f, groundLayer))
         {
-            // 1. Calcular el tamaño real de la celda en el mundo de Unity
+            // Compute the actual grid cell size in world units.
             float cellWorldSize = gridSize * studSize;
 
-            // 2. Snap to Grid (Multiplicando por la escala real)
+            // Snap the building position to the placement grid.
             float snappedX = Mathf.Round(hit.point.x / cellWorldSize) * cellWorldSize;
             float snappedZ = Mathf.Round(hit.point.z / cellWorldSize) * cellWorldSize;
-            Vector3 snappedPosition = new Vector3(snappedX, hit.point.y, snappedZ);
+
+            Vector3 snappedPosition = new Vector3(
+                snappedX,
+                hit.point.y,
+                snappedZ);
 
             ghostInstance.transform.position = snappedPosition;
 
-            // 3. Extents para Physics.CheckBox (Mitad del tamaño total)
             Vector2Int bSize = currentStatsToBuild.statsPerEra[playerEra].gridSize;
-            
-            // Tamaño total = (cantidad de studs ) * (tamaño del stud)
+
+            // Total building size in world units.
             float worldWidth = bSize.x * studSize;
             float worldLength = bSize.y * studSize;
 
-            Vector3 extents = new Vector3(worldWidth / 2f, 2f, worldLength / 2f);
+            // Compute collision extents for placement validation.
+            Vector3 extents = new Vector3(
+                worldWidth / 2f,
+                2f,
+                worldLength / 2f);
 
             isPlacementValid = !Physics.CheckBox(
-                snappedPosition + Vector3.up * 2f, 
-                extents - Vector3.one * 0.1f, // Margen de error pequeño para bordes
-                Quaternion.identity, 
-                obstacleLayer
-            );
+                snappedPosition + Vector3.up * 2f,
+                extents - Vector3.one * 0.1f,
+                Quaternion.identity,
+                obstacleLayer);
 
             UpdateGhostVisuals();
         }
     }
 
+    /// <summary>
+    /// Updates the ghost material to reflect
+    /// the current placement validity state.
+    /// </summary>
     private void UpdateGhostVisuals()
     {
         Material targetMat = isPlacementValid ? validMaterial : invalidMaterial;
-        foreach (var r in ghostRenderers) r.material = targetMat;
+
+        foreach (var renderer in ghostRenderers)
+        {
+            renderer.material = targetMat;
+        }
     }
 
+    /// <summary>
+    /// Finalizes the placement and spawns the actual building instance.
+    /// </summary>
     private void ConfirmPlacement()
     {
         Vector3 finalPosition = ghostInstance.transform.position;
@@ -137,22 +257,45 @@ public class BuildingPlacementHandler : MonoBehaviour
 
         GameObject realBuildingObj = Instantiate(prefabToBuild, finalPosition, Quaternion.identity);
         Building realBuilding = realBuildingObj.GetComponent<Building>();
-        
+
+        realBuilding.Initialize(PlayerManager.Instance.GetPlayer(currentBuilder.ownerPlayerId));
+
         if (currentBuilder != null && realBuilding != null)
         {
-            //currentBuilder.StartBuilding(realBuilding); 
+            //currentBuilder.StartBuilding(realBuilding);
         }
 
         CancelPlacement();
     }
 
+    /// <summary>
+    /// Cancels the current placement operation
+    /// and removes the active ghost preview.
+    /// </summary>
     public void CancelPlacement()
     {
-        if (ghostInstance != null) Destroy(ghostInstance);
+        if (ghostInstance != null)
+        {
+            Destroy(ghostInstance);
+            ghostInstance = null;
+        }
+
         currentStatsToBuild = null;
         currentBuilder = null;
     }
 
+    /// <summary>
+    /// Returns the building prefab corresponding to the specified era.
+    /// </summary>
+    /// <param name="stats">
+    /// Building configuration asset.
+    /// </param>
+    /// <param name="era">
+    /// Era index requested.
+    /// </param>
+    /// <returns>
+    /// Prefab associated with the specified era.
+    /// </returns>
     private GameObject GetPrefabForEra(BuildingStats stats, int era)
     {
         if (stats.prefabsPerEra != null && stats.prefabsPerEra.Length > 0)
@@ -162,23 +305,26 @@ public class BuildingPlacementHandler : MonoBehaviour
         }
         return null;
     }
-    
+
+    /// <summary>
+    /// Draws placement validation gizmos in the Scene view.
+    /// Used for debugging building footprint calculations.
+    /// </summary>
     private void OnDrawGizmos()
     {
         if (ghostInstance != null && currentStatsToBuild != null)
         {
             Gizmos.color = isPlacementValid ? new Color(0, 1, 0, 0.3f) : new Color(1, 0, 0, 0.3f);
-            
+
             Vector2Int bSize = currentStatsToBuild.statsPerEra[playerEra].gridSize;
-            
-            // Mismo cálculo para los Gizmos visuales
+
             float worldWidth = bSize.x * studSize;
             float worldLength = bSize.y * studSize;
+
             Vector3 extents = new Vector3(worldWidth / 2f, 2f, worldLength / 2f);
-            
             Vector3 center = ghostInstance.transform.position + Vector3.up * 2f;
 
-            Gizmos.DrawCube(center, extents * 2f); 
+            Gizmos.DrawCube(center, extents * 2f);
             Gizmos.DrawWireCube(center, extents * 2f);
         }
     }
