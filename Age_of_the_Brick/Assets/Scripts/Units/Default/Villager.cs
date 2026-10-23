@@ -293,7 +293,7 @@ public class Villager : Unit
         for (int i = 0; i < playerBuildings.Count; i++)
         {
             Building building = playerBuildings[i];
-            if (building == null || !building.IsFullyBuilt()) continue;
+            if (building == null || !building.IsFullyBuilt) continue;
 
             // Check if the building has a dropoff component and accepts the resource
             ResourceDropoff dropoff = building.DropoffComponent;

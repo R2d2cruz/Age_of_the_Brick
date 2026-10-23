@@ -28,7 +28,7 @@ public class ResourceDropoff : MonoBehaviour
     public bool ReceiveResource(ResourceType type, int amount)
     {
         if (!AcceptsResource(type)) return false;
-        if (!building.IsFullyBuilt()) return false;
+        if (!building.IsFullyBuilt) return false;
 
         // Entregar los recursos al Player propietario del edificio
         if (building.Owner != null)
