@@ -262,7 +262,7 @@ public class BuildingPlacementHandler : MonoBehaviour
 
         if (currentBuilder != null && realBuilding != null)
         {
-            //currentBuilder.StartBuilding(realBuilding);
+            currentBuilder.StartBuilding(realBuilding);
         }
 
         CancelPlacement();
