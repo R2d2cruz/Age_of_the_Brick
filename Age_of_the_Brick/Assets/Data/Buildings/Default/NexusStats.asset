@@ -33,4 +33,4 @@ MonoBehaviour:
     heavyAttack: 0
   hasVisualEvolution: 0
   prefabsPerEra:
-  - {fileID: 477284491252019083, guid: e257826e9e126474c986363773c06d68, type: 3}
+  - {fileID: 4116068179873920501, guid: 332d61bd83593424ea993b02ca315e3c, type: 3}

@@ -26,7 +26,7 @@ MonoBehaviour:
     health: 50
     lightDefense: 0
     heavyDefense: 0
-    visionRange: 7
+    visionRange: 24
     moveSpeed: 2.6
     range: 1
     attackSpeed: 2.6
@@ -34,7 +34,8 @@ MonoBehaviour:
     heavyAttack: 0
     buildingMultiplier: 4
     healSpeed: 0
-    buildSpeed: 20
+    buildSpeed: 2
+    buildHealth: 20
     gatherSpeed: 1.5
   - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
     health: 55
@@ -49,6 +50,7 @@ MonoBehaviour:
     buildingMultiplier: 4
     healSpeed: 0
     buildSpeed: 22
+    buildHealth: 0
     gatherSpeed: 1.5
   - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
     health: 60
@@ -63,6 +65,7 @@ MonoBehaviour:
     buildingMultiplier: 4
     healSpeed: 0
     buildSpeed: 24
+    buildHealth: 0
     gatherSpeed: 1.5
   - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
     health: 65
@@ -77,6 +80,7 @@ MonoBehaviour:
     buildingMultiplier: 4
     healSpeed: 0
     buildSpeed: 28
+    buildHealth: 0
     gatherSpeed: 1.5
   - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
     health: 70
@@ -91,6 +95,7 @@ MonoBehaviour:
     buildingMultiplier: 4
     healSpeed: 0
     buildSpeed: 30
+    buildHealth: 0
     gatherSpeed: 1.5
   - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
     health: 75
@@ -105,6 +110,7 @@ MonoBehaviour:
     buildingMultiplier: 4
     healSpeed: 0
     buildSpeed: 32
+    buildHealth: 0
     gatherSpeed: 1.5
   hasVisualEvolution: 0
   prefabsPerEra:
