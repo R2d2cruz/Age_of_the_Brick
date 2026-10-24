@@ -5,14 +5,6 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using System;
 
-public enum UnitBehaviourState
-{
-    Idle,
-    Moving,
-    Attacking,
-    Waiting
-}
-
 /// <summary>
 /// Base class for all in-game units.
 /// Inherits from <see cref="Selectable"/>, allowing player interaction (selection, commands).
@@ -701,15 +693,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     // === Internal State Classes ===
     // ============================================================
 
-    protected abstract class UnitState
-    {
-        protected Unit unit;
-        public UnitState(Unit u) { unit = u; }
-        public virtual void Enter() { }
-        public virtual void Exit() { }
-        public virtual void Tick() { }
-        public virtual UnitBehaviourState GetBehaviourState() { return UnitBehaviourState.Idle; }
-    }
+
 
     private class IdleState : UnitState
     {
