@@ -21,10 +21,11 @@ public enum UnitBehaviourState
     Attacking,
 
     /// <summary>
-    /// The unit is temporarily paused while waiting
-    /// for a condition to be fulfilled.
+    /// The unit is performing a productive task such as
+    /// gathering resources, constructing buildings,
+    /// repairing structures, or other work-related actions.
     /// </summary>
-    Waiting
+    Working
 }
 
 
