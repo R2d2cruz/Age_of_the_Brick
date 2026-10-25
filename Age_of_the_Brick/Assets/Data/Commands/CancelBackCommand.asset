@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 45c335a2d259a1948918f7dbc6cb6890, type: 3}
-  m_Name: CancekBackCommand
+  m_Name: CancelBackCommand
   m_EditorClassIdentifier: 
   defaultGridIndex: 0
   defaultHotkey: 0
