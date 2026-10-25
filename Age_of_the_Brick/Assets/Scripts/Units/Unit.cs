@@ -36,7 +36,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     /// <summary>
     /// Player who owns this unit. Handles registration, access, and era changes.
     /// </summary>
-    protected Player Owner { get; private set; }
+    public Player Owner { get; private set; }
 
     // ============================================================
     // HEALTH UI (WORLD SPACE)
@@ -46,14 +46,6 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     [SerializeField] private Vector3 healthCanvasOffset = new Vector3(0f, 5.4f, 0f);
     private static Camera mainCamCached; // Cached main camera reference for efficiency.
 
-    // ============================================================
-    // COMBAT AND STATE
-    // ============================================================
-
-    private bool isAttacking = false;
-    private Selectable currentTarget;   // Generic target (resource/building/unit)
-    private Unit attackTarget;          // Combat target (enemy unit)
-
     [Header("Death Behavior")]
     public bool fightsAfterDeath = false;       // Allows post-death fighting for a short time.
     public float postDeathFightDuration = 2f;   // Duration of post-death state.
@@ -61,6 +53,8 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     // ============================================================
     // STATE MACHINE
     // ============================================================
+
+    private IUnitComponent[] unitComponents;
 
     [Header("Unit States")]
     private UnitBehaviourState behaviourState = UnitBehaviourState.Idle;
@@ -70,7 +64,6 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     // Cached state instances to avoid GC allocations during transitions
     protected UnitState idleState;
     protected UnitState moveState;
-    protected UnitState attackState;
 
     [Header("Command Asset Lists")]
     [SerializeField] private List<CommandSO> mainCommands;
@@ -84,7 +77,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     {
         List<CommandAction> runtimeActions = new List<CommandAction>();
 
-        // Build runtime actions for current active menu
+        // 1. Comandos base de la unidad
         foreach (CommandSO cmdSO in currentActiveCommands)
         {
             if (cmdSO != null && cmdSO.ShouldDisplayAction(this))
@@ -93,11 +86,19 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
             }
         }
 
-        // If in a submenu, append the "Back" action automatically at slot 11
+        // 2. NUEVO: Comandos inyectados por los componentes (Ej. Construir)
+        if (unitComponents != null)
+        {
+            foreach (var component in unitComponents)
+            {
+                runtimeActions.AddRange(component.GetAvailableActions());
+            }
+        }
+
+        // 3. Comandos de submenú (Back button)
         if (currentActiveCommands != mainCommands && backCommandAsset != null)
         {
             CommandAction backAction = backCommandAsset.CreateRuntimeAction(this);
-            //backAction.actionCallback = ReturnToMainMenu;
             runtimeActions.Add(backAction);
         }
 
@@ -205,8 +206,13 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
         // Initialize state cache via Virtual Factory Methods
         idleState = CreateIdleState();
         moveState = CreateMoveState();
-        attackState = CreateAttackState();
         currentActiveCommands = mainCommands;
+
+        unitComponents = GetComponents<IUnitComponent>();
+        foreach (var component in unitComponents)
+        {
+            component.Initialize(this);
+        }
     }
 
     // ============================================================
@@ -323,11 +329,10 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
         if (agent != null)
             agent.speed = currentStats.moveSpeed;
 
-        if (animator != null)
-        {
-            animator.SetFloat("moveSpeedMultiplier", currentStats.moveSpeed);
-            animator.SetFloat("attackSpeedMultiplier", currentStats.attackSpeed);
-        }
+        ChangeAnimatorMultiplier("moveSpeedMultiplier", currentStats.moveSpeed);
+        if (TryGetComponent(out IGatherer gatherer)) gatherer.OnEraChanged(era);
+        if (TryGetComponent(out IAttacker attacker)) attacker.OnEraChanged(era);
+        if (TryGetComponent(out IBuilder builder)) builder.OnEraChanged(era);
     }
 
     /// <summary>
@@ -338,12 +343,13 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
         currentHealth = Mathf.Min(oldUnit.currentHealth, stats.statsPerEra[era].health);
         UpdateStats(era);
 
-        if (oldUnit.attackTarget != null)
-        {
-            attackTarget = oldUnit.attackTarget;
-            if (oldUnit.isAttacking)
-                ChangeState(attackState);
-        }
+        if (oldUnit.TryGetComponent(out IGatherer oldGatherer) && TryGetComponent(out IGatherer gatherer))
+            gatherer.OnUnitChange(oldGatherer);
+        if (oldUnit.TryGetComponent(out IAttacker oldAttacker) && TryGetComponent(out IAttacker attacker))
+            attacker.OnUnitChange(oldAttacker);
+        if (oldUnit.TryGetComponent(out IBuilder oldBuilder) && TryGetComponent(out IBuilder builder))
+            builder.OnUnitChange(oldBuilder);
+
 
         if (oldUnit.agent != null && oldUnit.agent.hasPath)
             MoveTo(oldUnit.agent.destination);
@@ -368,15 +374,43 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     {
         if (target == null || target.state == SelectableState.Dead) return;
 
-        // Check if the target belongs to an opposing player
-        if (target.IsEnemyTo(ownerPlayerId))
+        // 1. ¿Es un recurso y puedo recolectar?
+        if (target.CompareTag("Resource"))
         {
-            Unit enemyUnit = target.GetComponent<Unit>();
-            if (enemyUnit != null)
+            if (TryGetComponent(out IGatherer gatherer) && target is Resource resource)
             {
-                Attack(enemyUnit);
+                gatherer.StartGathering(resource);
+                return;
             }
         }
+
+        // 2. ¿Es un enemigo y puedo atacar?
+        if (target.IsEnemyTo(ownerPlayerId))
+        {
+            if (TryGetComponent(out IAttacker attacker))
+            {
+                attacker.Attack(target);
+                return;
+            }
+        }
+
+
+        // 3. ¿Es un edificio aliado incompleto y puedo construir?
+        if (target.CompareTag("Building") && !target.IsEnemyTo(ownerPlayerId))
+        {
+            Building building = target.GetComponent<Building>();
+            if (building != null && !building.IsFullyBuilt)
+            {
+                if (TryGetComponent(out IBuilder builder))
+                {
+                    builder.StartBuilding(building);
+                    return;
+                }
+            }
+        }
+
+        // 4. Si no puedo interactuar, simplemente me muevo hacia él
+        MoveTo(target.transform.position);
     }
 
     // ============================================================
@@ -395,35 +429,25 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
         return new MovingState(this, Vector3.zero);
     }
 
-    protected virtual UnitState CreateAttackState()
-    {
-        return new AttackingState(this);
-    }
-
     #endregion
 
     #region State Change Functions
 
-    protected virtual void ChangeToIdleState()
+    public virtual void ChangeToIdleState()
     {
         ChangeState(idleState);
     }
 
-    protected virtual void ChangeToMoveState(Vector3 des)
+    public virtual void ChangeToMoveState(Vector3 des)
     {
         moveState = new MovingState(this, des);
         ChangeState(moveState);
     }
 
-    protected virtual void ChangeToAttackState()
-    {
-        ChangeState(attackState);
-    }
-
     #endregion
 
 
-    protected void SetBehaviourState(UnitBehaviourState newState)
+    public void SetBehaviourState(UnitBehaviourState newState)
     {
         if (behaviourState == newState) return;
 
@@ -437,13 +461,10 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
             case UnitBehaviourState.Moving:
                 PlayWalkAnimation();
                 break;
-            case UnitBehaviourState.Attacking:
-                PlayAttackAnimation();
-                break;
         }
     }
 
-    protected void ChangeState(UnitState newState)
+    public void ChangeState(UnitState newState)
     {
         currentState?.Exit();
         currentState = newState;
@@ -469,7 +490,12 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     // ANIMATIONS
     // ============================================================
 
-    protected void ChangeAnimtion(String newAnim)
+    public void ChangeAnimatorMultiplier(String key, float multiplier)
+    {
+        if (animator != null) animator.SetFloat(key, multiplier);
+    }
+
+    public void ChangeAnimation(String newAnim)
     {
         animator?.SetBool(currentAnimation, false);
         currentAnimation = newAnim;
@@ -478,17 +504,12 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
 
     public virtual void PlayIdleAnimation()
     {
-        ChangeAnimtion("idle");
+        ChangeAnimation("idle");
     }
 
     public virtual void PlayWalkAnimation()
     {
-        ChangeAnimtion("isMoving");
-    }
-
-    protected virtual void PlayAttackAnimation()
-    {
-        ChangeAnimtion("attack");
+        ChangeAnimation("isMoving");
     }
 
     // ============================================================
@@ -508,18 +529,12 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     public void Wait()
     {
         StopAllCoroutines();
-        attackTarget = null;
-        isAttacking = false;
         if (agent != null) agent.isStopped = true;
         ChangeToIdleState();
     }
 
     public void MoveTo(Vector3 destination)
     {
-        currentTarget = null;
-        attackTarget = null;
-        isAttacking = false;
-
         if (agent != null)
         {
             agent.isStopped = false;
@@ -530,104 +545,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
         ChangeToMoveState(destination);
     }
 
-    public void SetTarget(Selectable target)
-    {
-        if (target == null) return;
 
-        currentTarget = target;
-        attackTarget = target.GetComponent<Unit>();
-        isAttacking = false;
-
-        if (attackTarget != null && attackTarget.Owner != Owner)
-        {
-            isAttacking = true;
-            ChangeToAttackState();
-        }
-        else if (target.CompareTag("Building"))
-        {
-            // TODO: handle building interaction
-        }
-    }
-
-    public void Attack(Unit target)
-    {
-        if (target == null) return;
-
-        currentTarget = target;
-        attackTarget = target;
-        isAttacking = true;
-        ChangeToAttackState();
-    }
-
-    // ============================================================
-    // COMBAT AND ROUTINES
-    // ============================================================
-
-    /// <summary>
-    /// Finds the nearest enemy unit within the visionRange radius.
-    /// </summary>
-    protected Unit FindNearestEnemy()
-    {
-        float visionRangeRadius = (currentStats != null && currentStats.visionRange * 2 > 0) ? currentStats.visionRange * 2 : 12f;
-        Collider[] hits = Physics.OverlapSphere(transform.position, visionRangeRadius);
-
-        Unit nearestEnemy = null;
-        float minDist = Mathf.Infinity;
-
-        foreach (var hit in hits)
-        {
-            Unit candidate = hit.GetComponent<Unit>();
-            if (candidate == null || candidate == this) continue;
-            if (candidate.state != SelectableState.Alive) continue;
-            if (!candidate.IsEnemyTo(ownerPlayerId)) continue;
-
-            float dist = Vector3.Distance(transform.position, candidate.transform.position);
-            if (dist < minDist)
-            {
-                minDist = dist;
-                nearestEnemy = candidate;
-            }
-        }
-        return nearestEnemy;
-    }
-
-    private void StopAttacking()
-    {
-        isAttacking = false;
-        attackTarget = null;
-
-        if (agent != null)
-            agent.isStopped = true;
-
-        if (animator != null)
-        {
-            animator.SetBool("attack", false);
-            animator.SetBool("isMoving", false);
-        }
-    }
-
-    /// <summary>
-    /// Called by attack animation event when the hit connects.
-    /// </summary>
-    public virtual void OnAttackHit()
-    {
-        if (attackTarget == null && attackTarget.state == SelectableState.Dead) return;
-    }
-
-    /// <summary>
-    /// Lógica pura de combate. Aplica daño directo en melee.
-    /// Unidades a distancia deben sobrescribir esto para instanciar proyectiles.
-    /// </summary>
-    protected virtual void ExecuteAttackLogic()
-    {
-        if (attackTarget == null || attackTarget.state == SelectableState.Dead) return;
-
-        // Validamos la distancia nuevamente por si el objetivo se movió en el último frame
-        float distance = GetDistanceToTargetSurface(attackTarget);
-        if (distance > GetInteractionRange()) return;
-
-        attackTarget.TakeDamage(currentStats.lightAttack, currentStats.heavyAttack);
-    }
 
     /// <summary>
     /// Applies incoming damage considering defenses.
@@ -671,7 +589,6 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
         if (state == SelectableState.Dead) return;
 
         state = SelectableState.Dead;
-        isAttacking = false;
 
         StopAllCoroutines();
         animator?.SetTrigger("die");
@@ -726,12 +643,6 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
 
         public override void Tick()
         {
-            if (unit.attackTarget != null && unit.attackTarget != unit && unit.attackTarget.state == SelectableState.Alive)
-            {
-                unit.ChangeToAttackState();
-                return;
-            }
-
             if (unit.agent == null) return;
 
             if (unit.agent.pathPending)
@@ -751,101 +662,5 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
         }
 
         public override UnitBehaviourState GetBehaviourState() => UnitBehaviourState.Moving;
-    }
-
-    protected class AttackingState : UnitState
-    {
-        private float attackTimer = 0f;
-        private const float BaseAnimationDuration = 1.05f;
-        public AttackingState(Unit u) : base(u) { }
-
-        public override void Enter()
-        {
-            unit.isAttacking = true;
-            unit.SetBehaviourState(UnitBehaviourState.Attacking);
-            // Iniciamos el temporizador en 0 para obligar a que pase el tiempo de la animación
-            attackTimer = 0f; 
-            
-            // Disparamos la animación al entrar al estado (asumiendo que está en loop continuo)
-            unit.PlayAttackAnimation();
-        }
-
-        public override void Tick()
-        {
-            if (unit.attackTarget == null || unit.attackTarget.state != SelectableState.Alive)
-            {
-                Unit newTarget = unit.FindNearestEnemy();
-                if (newTarget != null)
-                {
-                    unit.attackTarget = newTarget;
-                }
-                else
-                {
-                    unit.StopAttacking();
-                    unit.ChangeToIdleState();
-                    return;
-                }
-            }
-
-            if (unit.attackTarget != null)
-            {
-                float distanceToTarget = unit.GetDistanceToTargetSurface(unit.attackTarget);
-                float attackRange = unit.GetInteractionRange();
-
-                if (distanceToTarget > attackRange)
-                {
-                    // Reiniciamos el temporizador si el enemigo se aleja y tenemos que perseguirlo
-                    attackTimer = 0f; 
-                    
-                    if (unit.agent != null)
-                    {
-                        unit.agent.isStopped = false;
-                        unit.agent.SetDestination(unit.attackTarget.transform.position);
-                    }
-                    unit.SetBehaviourState(UnitBehaviourState.Moving);
-                }
-                else
-                {
-                    if (unit.agent != null) unit.agent.isStopped = true;
-
-                    // Rotación suave hacia el objetivo
-                    Vector3 lookDir = unit.attackTarget.transform.position - unit.transform.position;
-                    lookDir.y = 0;
-                    if (lookDir.sqrMagnitude > 0.001f)
-                    {
-                        unit.transform.rotation = Quaternion.Slerp(
-                            unit.transform.rotation,
-                            Quaternion.LookRotation(lookDir),
-                            Time.deltaTime * 10f
-                        );
-                    }
-
-                    unit.SetBehaviourState(UnitBehaviourState.Attacking);
-
-                    // Avanzamos el temporizador lógico multiplicándolo por la velocidad de ataque
-                    float speedMultiplier = Mathf.Max(0.0001f, unit.currentStats.attackSpeed);
-                    attackTimer += Time.deltaTime * speedMultiplier;
-
-                    // Cuando el temporizador alcanza la duración de la animación (1.05s)
-                    if (attackTimer >= BaseAnimationDuration)
-                    {
-                        // Descontamos el tiempo en lugar de volver a 0 para no perder milisegundos residuales
-                        attackTimer -= BaseAnimationDuration;
-                        
-                        // ¡El golpe impacta lógicamente al final de la animación!
-                        unit.ExecuteAttackLogic(); 
-                    }
-                }
-            }
-        }
-
-        public override void Exit()
-        {
-            unit.isAttacking = false;
-            attackTimer = 0f;
-            unit.animator?.SetBool("attack", false);
-        }
-
-        public override UnitBehaviourState GetBehaviourState() => UnitBehaviourState.Attacking;
     }
 }
