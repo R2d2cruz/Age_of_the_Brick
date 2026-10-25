@@ -61,7 +61,7 @@ public class BuildingPlacementHandler : MonoBehaviour
     /// <summary>
     /// Villager responsible for constructing the building.
     /// </summary>
-    private Villager currentBuilder;
+    private BuilderComponent currentBuilder;
 
     /// <summary>
     /// Current player era used to determine stats and visuals.
@@ -116,7 +116,7 @@ public class BuildingPlacementHandler : MonoBehaviour
     /// <param name="era">
     /// Current player era.
     /// </param>
-    public void BeginPlacement(BuildingStats stats, Villager builder, int era)
+    public void BeginPlacement(BuildingStats stats, BuilderComponent builder, int era)
     {
         CancelPlacement();
 
@@ -204,11 +204,7 @@ public class BuildingPlacementHandler : MonoBehaviour
             float snappedX = Mathf.Round(hit.point.x / cellWorldSize) * cellWorldSize;
             float snappedZ = Mathf.Round(hit.point.z / cellWorldSize) * cellWorldSize;
 
-            Vector3 snappedPosition = new Vector3(
-                snappedX,
-                hit.point.y,
-                snappedZ);
-
+            Vector3 snappedPosition = new Vector3(snappedX, hit.point.y, snappedZ);
             ghostInstance.transform.position = snappedPosition;
 
             Vector2Int bSize = currentStatsToBuild.statsPerEra[playerEra].gridSize;
@@ -218,16 +214,21 @@ public class BuildingPlacementHandler : MonoBehaviour
             float worldLength = bSize.y * studSize;
 
             // Compute collision extents for placement validation.
-            Vector3 extents = new Vector3(
-                worldWidth / 2f,
-                2f,
-                worldLength / 2f);
+            Vector3 extents = new Vector3(worldWidth / 2f, 2f, worldLength / 2f);
 
-            isPlacementValid = !Physics.CheckBox(
+            // Verify whether the placement area is blocked by any obstacle.
+            bool isBlocked = Physics.CheckBox(
                 snappedPosition + Vector3.up * 2f,
                 extents - Vector3.one * 0.1f,
                 Quaternion.identity,
                 obstacleLayer);
+
+            // Verify that the player has enough resources to construct the selected building.
+            Player player = PlayerManager.Instance.GetPlayer(currentBuilder.OwnerPlayerId);
+            bool hasResources = player != null && player.HasResourcesForBuilding(currentStatsToBuild);
+
+            // Placement is allowed only when all requirements are satisfied.
+            isPlacementValid = !isBlocked && hasResources;
 
             UpdateGhostVisuals();
         }
@@ -255,10 +256,14 @@ public class BuildingPlacementHandler : MonoBehaviour
         Vector3 finalPosition = ghostInstance.transform.position;
         GameObject prefabToBuild = GetPrefabForEra(currentStatsToBuild, playerEra);
 
+        Player player = PlayerManager.Instance.GetPlayer(currentBuilder.OwnerPlayerId);
+
+        player?.UseResources(currentStatsToBuild.constructionCosts);
+
         GameObject realBuildingObj = Instantiate(prefabToBuild, finalPosition, Quaternion.identity);
         Building realBuilding = realBuildingObj.GetComponent<Building>();
 
-        realBuilding.Initialize(PlayerManager.Instance.GetPlayer(currentBuilder.ownerPlayerId));
+        realBuilding.Initialize(player);
 
         if (currentBuilder != null && realBuilding != null)
         {
