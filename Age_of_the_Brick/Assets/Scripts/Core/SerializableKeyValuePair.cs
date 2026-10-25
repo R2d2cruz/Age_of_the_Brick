@@ -131,3 +131,9 @@ public class ResourceCostDictionary
     : SerializableDictionary<ResourceType, int>
 {
 }
+
+[Serializable]
+public class CommandActionDictionary
+    : SerializableDictionary<CommandAction, int>
+{
+}
