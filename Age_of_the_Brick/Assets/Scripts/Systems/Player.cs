@@ -106,6 +106,7 @@ public class Player
     {
         foreach (ResourceType resource in resourcesForUse.Keys) {
             resources[resource] -= resourcesForUse[resource];
+            OnResourceChanged?.Invoke(resource, resources[resource]);
         }
     }
 
@@ -113,6 +114,7 @@ public class Player
     {
         foreach (ResourceType resource in resourcesForUse.Keys) {
             resources[resource] += resourcesForUse[resource];
+            OnResourceChanged?.Invoke(resource, resources[resource]);
         }
     }
 }
