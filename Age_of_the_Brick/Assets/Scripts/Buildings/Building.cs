@@ -45,7 +45,7 @@ public class Building : Selectable, IActionProvider
     /// <summary>
     /// Optional component responsible for unit production.
     /// </summary>
-    public UnitProducer ProducerComponent;
+    public UnitProducerComponent ProducerComponent;
     /// <summary>
     /// Optional component responsible for construction progress
     /// and destruction handling.

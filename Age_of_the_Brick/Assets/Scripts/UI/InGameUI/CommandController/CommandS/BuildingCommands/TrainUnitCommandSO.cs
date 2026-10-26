@@ -31,7 +31,7 @@ public class TrainUnitCommandSO : CommandSO
             },
             actionCallback = () =>
             {
-                if (context.TryGetComponent(out UnitProducer producer))
+                if (context.TryGetComponent(out UnitProducerComponent producer))
                 {
                     producer.QueueUnit(unitToTrain);
                 }
