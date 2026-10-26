@@ -114,4 +114,4 @@ MonoBehaviour:
     gatherSpeed: 1.5
   hasVisualEvolution: 0
   prefabsPerEra:
-  - {fileID: 7945390084030730056, guid: 82e59a6702d87b54abb7d12591155b94, type: 3}
+  - {fileID: 614954035464766975, guid: 3fe21defe7ad9e64b892d988aee8e275, type: 3}
