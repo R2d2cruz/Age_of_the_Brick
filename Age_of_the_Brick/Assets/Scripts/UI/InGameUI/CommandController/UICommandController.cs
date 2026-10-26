@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,6 +28,17 @@ public class UICommandController : MonoBehaviour
     /// Each button occupies a predefined slot in the interface.
     /// </summary>
     [SerializeField] private List<UIActionButton> gridButtons;
+
+    [Header("Task Queue")]
+    [SerializeField] private GameObject taskContainer;
+    [SerializeField] private GameObject QueuetaskContainer;
+    [SerializeField] private GridLayoutGroup taskGrid;
+    [SerializeField] private TaskButton bigTaskButtonPrefab;
+    [SerializeField] private TaskButton smallTaskButtonPrefab;
+    [SerializeField] private int maxBigButtons = 8;
+    private ProductionQueueComponent activeQueue;
+    private List<TaskButton> spawnedTaskButtons = new List<TaskButton>();
+
 
     /// <summary>
     /// Current list of selected entities.
@@ -67,6 +79,15 @@ public class UICommandController : MonoBehaviour
         HidePanel();
     }
 
+    private void Update()
+    {
+        // Actualiza el fillAmount del primer botón (el único que progresa)
+        if (activeQueue != null && spawnedTaskButtons.Count > 0)
+        {
+            spawnedTaskButtons[0].UpdateProgress(activeQueue.CurrentTaskProgress);
+        }
+    }
+
     private void OnDestroy()
     {
         if (SelectionHandler.Instance != null)
@@ -82,6 +103,11 @@ public class UICommandController : MonoBehaviour
         if (localPlayer != null)
         {
             localPlayer.OnResourceChanged -= HandleResourceChanged;
+        }
+
+        if (activeQueue != null)
+        {
+            activeQueue.OnQueueChanged -= RefreshTaskQueueUI;
         }
     }
 
@@ -123,9 +149,6 @@ public class UICommandController : MonoBehaviour
     /// Triggered whenever the current selection changes.
     /// Updates the command grid to match the selected entities.
     /// </summary>
-    /// <param name="selectedList">
-    /// The newly selected entities.
-    /// </param>
     private void HandleSelectionChanged(List<Selectable> selectedList)
     {
         currentSelection = selectedList;
@@ -133,16 +156,97 @@ public class UICommandController : MonoBehaviour
         if (currentSelection == null || currentSelection.Count == 0)
         {
             HidePanel();
+            BindQueue(null); // Limpia la cola
             return;
         }
 
         RefreshGrid();
+
+        // 1. Buscamos si el elemento principal tiene una cola de producción
+        Selectable primary = currentSelection[0];
+        ProductionQueueComponent queue = primary.GetComponent<ProductionQueueComponent>();
+        BindQueue(queue);
+    }
+
+    #region Task Queue Logic
+
+    /// <summary>
+    /// Vincula o desvincula un edificio productor al panel de la interfaz.
+    /// </summary>
+    private void BindQueue(ProductionQueueComponent newQueue)
+    {
+        if (activeQueue != null)
+        {
+            activeQueue.OnQueueChanged -= RefreshTaskQueueUI;
+        }
+
+        activeQueue = newQueue;
+
+        if (activeQueue != null)
+        {
+            activeQueue.OnQueueChanged += RefreshTaskQueueUI;
+            RefreshTaskQueueUI();
+            taskContainer.SetActive(true);
+        }
+        else
+        {
+            ClearTaskButtons();
+            taskContainer.SetActive(false);
+        }
     }
 
     /// <summary>
+    /// Redibuja los botones de la cola basándose en el tamaño de la misma.
+    /// </summary>
+    private void RefreshTaskQueueUI()
+    {
+        ClearTaskButtons();
+
+        if (activeQueue == null) return;
+
+        var currentTasks = activeQueue.CurrentQueue;
+        if (currentTasks.Count == 0) return;
+
+        bool useCompactMode = currentTasks.Count > maxBigButtons;
+
+        taskGrid.cellSize = new Vector2(taskGrid.cellSize.x, useCompactMode ? 30f : 60f);
+
+        for (int i = 0; i < currentTasks.Count; i++)
+        {
+            // Determina qué prefab instanciar:
+            // Si hay muchas tareas, solo el índice 0 (el primero) usa el botón grande.
+            TaskButton prefabToUse = (useCompactMode && i > 0) ? smallTaskButtonPrefab : bigTaskButtonPrefab;
+
+            TaskButton newButton;
+
+            if (i == 0)
+            {
+                newButton = Instantiate(prefabToUse, taskContainer.transform);
+            }
+            else
+            {
+                newButton = Instantiate(prefabToUse, QueuetaskContainer.transform);
+            }
+
+            newButton.Setup(currentTasks[i], i, activeQueue);
+
+            spawnedTaskButtons.Add(newButton);
+        }
+    }
+
+    private void ClearTaskButtons()
+    {
+        foreach (var btn in spawnedTaskButtons)
+        {
+            if (btn != null) Destroy(btn.gameObject);
+        }
+        spawnedTaskButtons.Clear();
+    }
+
+    #endregion
+
+    /// <summary>
     /// Rebuilds the command grid based on the current selection.
-    /// Retrieves available actions, updates button states,
-    /// and injects formation commands when applicable.
     /// </summary>
     public void RefreshGrid()
     {
@@ -205,11 +309,11 @@ public class UICommandController : MonoBehaviour
     /// </returns>
     private bool IsMilitarySelection()
     {
-        foreach (var sel in currentSelection)
+        /* foreach (var sel in currentSelection)
         {
             if (sel is MilitaryUnit)
                 return true;
-        }
+        } */
 
         return false;
     }
