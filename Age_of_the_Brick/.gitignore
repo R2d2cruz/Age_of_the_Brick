@@ -109,8 +109,10 @@ Assets/TextMesh Pro
 Assets/TextMesh Pro.meta
 /Examples & Extras/
 
-# Local Cursor/agent config (not shipped with the game repo)
+# Local Cursor/agent config (not shipped with the game repo).
+# Specs/plans live in the separate CursorLocal docs repo; keep docs/ ignored here.
+# .superpowers at git root is also ignored by the repository-root .gitignore.
 .cursor/
 AGENTS.md
 docs/
-.superpowers
+.superpowers/
