@@ -58,7 +58,7 @@ public class UnitStats : ScriptableObject
     /// Population space required to create and maintain this unit.
     /// </summary>
     [Tooltip("Required population space.")]
-    public float unitSpace;
+    public int unitSpace;
 
     // -------------------------
     // COST
