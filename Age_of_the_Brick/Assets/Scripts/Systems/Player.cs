@@ -31,13 +31,49 @@ public class Player
     /// </summary>
     public event Action<ResourceType, int> OnResourceChanged;
 
+    private int populationUsed;
+    private int populationCapacity;
+    private int populationHardCap;
 
-    public Player(int id, string name, int startingEra = 0, Material mat = null)
+    /// <summary>Current population used. Public read surface for UI/commands.</summary>
+    public int PopulationUsed => populationUsed;
+
+    /// <summary>
+    /// Housing capacity from buildings (and seeds). Owner state — consumers should prefer <see cref="EffectiveMax"/>.
+    /// </summary>
+    public int PopulationCapacity => populationCapacity;
+
+    /// <summary>
+    /// Match hard cap. Owner state — consumers should prefer <see cref="EffectiveMax"/>.
+    /// </summary>
+    public int PopulationHardCap => populationHardCap;
+
+    /// <summary>Public max: min(capacity, hardCap).</summary>
+    public int EffectiveMax => Math.Min(populationCapacity, populationHardCap);
+
+    /// <summary>EffectiveMax - Used; may be negative if overpopulated.</summary>
+    public int FreePopulation => EffectiveMax - populationUsed;
+
+    /// <summary>Fired when Used and/or EffectiveMax change. Args: used, effectiveMax.</summary>
+    public event Action<int, int> OnPopulationChanged;
+
+    public Player(
+        int id,
+        string name,
+        int startingEra = 0,
+        Material mat = null,
+        int startingPopulationUsed = 0,
+        int startingPopulationCapacity = 0,
+        int populationHardCap = 200)
     {
         playerId = id;
         playerName = name;
         playerMaterial = mat; // 👈 guarda el material
         currentEra = startingEra;
+
+        this.populationUsed = Math.Max(0, startingPopulationUsed);
+        this.populationCapacity = Math.Max(0, startingPopulationCapacity);
+        this.populationHardCap = Math.Max(0, populationHardCap);
     }
 
     // --- Gestión de unidades ---
@@ -116,5 +152,70 @@ public class Player
             resources[resource] += resourcesForUse[resource];
             OnResourceChanged?.Invoke(resource, resources[resource]);
         }
+    }
+
+    private static int NonNegativeDelta(int amount) => amount < 0 ? 0 : amount;
+
+    private void NotifyPopulationChangedIfNeeded(int previousUsed, int previousEffectiveMax)
+    {
+        if (populationUsed == previousUsed && EffectiveMax == previousEffectiveMax)
+            return;
+        OnPopulationChanged?.Invoke(populationUsed, EffectiveMax);
+    }
+
+    public void AddPopulationUsed(int amount)
+    {
+        int previousUsed = populationUsed;
+        int previousEffective = EffectiveMax;
+        populationUsed = Math.Max(0, populationUsed + NonNegativeDelta(amount));
+        NotifyPopulationChangedIfNeeded(previousUsed, previousEffective);
+    }
+
+    public void RemovePopulationUsed(int amount)
+    {
+        int previousUsed = populationUsed;
+        int previousEffective = EffectiveMax;
+        populationUsed = Math.Max(0, populationUsed - NonNegativeDelta(amount));
+        NotifyPopulationChangedIfNeeded(previousUsed, previousEffective);
+    }
+
+    public void SetPopulationUsed(int value)
+    {
+        int previousUsed = populationUsed;
+        int previousEffective = EffectiveMax;
+        populationUsed = Math.Max(0, value);
+        NotifyPopulationChangedIfNeeded(previousUsed, previousEffective);
+    }
+
+    public void AddPopulationCapacity(int amount)
+    {
+        int previousUsed = populationUsed;
+        int previousEffective = EffectiveMax;
+        populationCapacity = Math.Max(0, populationCapacity + NonNegativeDelta(amount));
+        NotifyPopulationChangedIfNeeded(previousUsed, previousEffective);
+    }
+
+    public void RemovePopulationCapacity(int amount)
+    {
+        int previousUsed = populationUsed;
+        int previousEffective = EffectiveMax;
+        populationCapacity = Math.Max(0, populationCapacity - NonNegativeDelta(amount));
+        NotifyPopulationChangedIfNeeded(previousUsed, previousEffective);
+    }
+
+    public void SetPopulationCapacity(int value)
+    {
+        int previousUsed = populationUsed;
+        int previousEffective = EffectiveMax;
+        populationCapacity = Math.Max(0, value);
+        NotifyPopulationChangedIfNeeded(previousUsed, previousEffective);
+    }
+
+    public void SetPopulationHardCap(int value)
+    {
+        int previousUsed = populationUsed;
+        int previousEffective = EffectiveMax;
+        populationHardCap = Math.Max(0, value);
+        NotifyPopulationChangedIfNeeded(previousUsed, previousEffective);
     }
 }
