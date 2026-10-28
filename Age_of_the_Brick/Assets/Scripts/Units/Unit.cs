@@ -249,7 +249,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     private void OnDestroy()
     {
         UnsubscribeFromOwner();
-        Owner?.Registry.UnregisterUnit(this);
+        Owner?.UnregisterUnit(this);
     }
 
     // ============================================================
@@ -269,7 +269,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
         if (currentHealth <= 0)
             currentHealth = currentStats.health;
 
-        Owner.Registry.RegisterUnit(this);
+        Owner.RegisterUnit(this);
     }
 
     private void SubscribeToOwner()
