@@ -10,7 +10,6 @@ public class PlayerManager : MonoBehaviour
     [SerializeField] private int localPlayerId = 1; // 🔹 Default Player 1 (Player 1)
 
     [Header("Population Seeds")]
-    [SerializeField] private int startingPopulationUsed = 0;
     [SerializeField] private int startingPopulationCapacity = 0;
     [SerializeField] private int populationHardCap = 200;
 
@@ -53,7 +52,6 @@ public class PlayerManager : MonoBehaviour
                 $"Player{i + 1}",
                 0,
                 playerMat,
-                startingPopulationUsed,
                 startingPopulationCapacity,
                 populationHardCap));
         }
