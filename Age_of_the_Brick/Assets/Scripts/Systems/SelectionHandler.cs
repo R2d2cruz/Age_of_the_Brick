@@ -79,6 +79,11 @@ public class SelectionHandler : MonoBehaviour
     /// </summary>
     private Player localPlayer;
 
+    /// <summary>
+    /// True after LeftClick callbacks are wired to <see cref="InputManager"/>.
+    /// </summary>
+    private bool inputSubscribed;
+
     private void Awake()
     {
         if (Instance == null)
@@ -100,6 +105,10 @@ public class SelectionHandler : MonoBehaviour
 
     private void Start()
     {
+        // InputManager.Awake may run after this component's OnEnable on the same
+        // GameObject; Start always runs after every Awake, so retry subscription here.
+        TrySubscribeInput();
+
         if (PlayerManager.Instance != null)
         {
             PlayerManager.Instance.OnLocalPlayerChanged += HandleLocalPlayerChanged;
@@ -137,13 +146,7 @@ public class SelectionHandler : MonoBehaviour
     /// </summary>
     private void OnEnable()
     {
-        if (InputManager.Instance == null)
-            return;
-
-        var gameplay = InputManager.Instance.Actions.Gameplay;
-
-        gameplay.LeftClick.started += OnLeftClickStarted;
-        gameplay.LeftClick.canceled += OnLeftClickCanceled;
+        TrySubscribeInput();
     }
 
     /// <summary>
@@ -151,13 +154,42 @@ public class SelectionHandler : MonoBehaviour
     /// </summary>
     private void OnDisable()
     {
+        UnsubscribeInput();
+    }
+
+    /// <summary>
+    /// Wires LeftClick if InputManager is ready and not already subscribed.
+    /// </summary>
+    private void TrySubscribeInput()
+    {
+        if (inputSubscribed)
+            return;
+
         if (InputManager.Instance == null)
             return;
 
         var gameplay = InputManager.Instance.Actions.Gameplay;
+        gameplay.LeftClick.started += OnLeftClickStarted;
+        gameplay.LeftClick.canceled += OnLeftClickCanceled;
+        inputSubscribed = true;
+    }
 
-        gameplay.LeftClick.started -= OnLeftClickStarted;
-        gameplay.LeftClick.canceled -= OnLeftClickCanceled;
+    /// <summary>
+    /// Unwires LeftClick when previously subscribed.
+    /// </summary>
+    private void UnsubscribeInput()
+    {
+        if (!inputSubscribed)
+            return;
+
+        if (InputManager.Instance != null)
+        {
+            var gameplay = InputManager.Instance.Actions.Gameplay;
+            gameplay.LeftClick.started -= OnLeftClickStarted;
+            gameplay.LeftClick.canceled -= OnLeftClickCanceled;
+        }
+
+        inputSubscribed = false;
     }
 
     /// <summary>
