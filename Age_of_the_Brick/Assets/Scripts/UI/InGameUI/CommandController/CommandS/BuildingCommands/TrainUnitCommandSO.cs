@@ -27,7 +27,9 @@ public class TrainUnitCommandSO : CommandSO
             isInteractable = () =>
             {
                 if (context == null || context.state != SelectableState.Alive) return false;
-                return owner != null && owner.HasResourcesForUnit(unitToTrain);
+                return owner != null
+                    && owner.HasResourcesForUnit(unitToTrain)
+                    && owner.HasPopulationFor(unitToTrain);
             },
             actionCallback = () =>
             {
