@@ -9,6 +9,10 @@ public class PlayerManager : MonoBehaviour
     [Header("Local Player Configuration")]
     [SerializeField] private int localPlayerId = 1; // 🔹 Default Player 1 (Player 1)
 
+    [Header("Population Seeds")]
+    [SerializeField] private int startingPopulationCapacity = 0;
+    [SerializeField] private int populationHardCap = 200;
+
     [Header("UI References")]
     [SerializeField] private UIResourceBar resourceBarUI;
 
@@ -43,7 +47,13 @@ public class PlayerManager : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             Material playerMat = (defaultMaterials != null && defaultMaterials.Length > i) ? defaultMaterials[i] : null;
-            players.Add(i, new Player(i, $"Player{i + 1}", 0, playerMat));
+            players.Add(i, new Player(
+                i,
+                $"Player{i + 1}",
+                0,
+                playerMat,
+                startingPopulationCapacity,
+                populationHardCap));
         }
     }
 

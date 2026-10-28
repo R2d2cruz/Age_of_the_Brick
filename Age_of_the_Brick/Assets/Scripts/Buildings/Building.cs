@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using System.Collections.Generic;
 using Unity.VisualScripting;
@@ -17,6 +18,11 @@ public class Building : Selectable, IActionProvider
     /// and can provide its full functionality.
     /// </summary>
     public bool IsFullyBuilt { get; private set; } = false;
+
+    /// <summary>
+    /// Raised when construction completes (including startFullyConstructed).
+    /// </summary>
+    public event Action OnConstructionFinished;
 
     [Header("Config")]
     /// <summary>
@@ -290,6 +296,7 @@ public class Building : Selectable, IActionProvider
         RefreshBuildingVisuals();
         // Refresca la UI de comandos para mostrar las acciones del edificio terminado
         UICommandController.Instance?.RefreshGrid();
+        OnConstructionFinished?.Invoke();
     }
 
     /// <summary>

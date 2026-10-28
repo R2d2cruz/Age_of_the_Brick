@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using System.Collections.Generic;
 using Unity.VisualScripting;
@@ -43,11 +44,15 @@ public class UnitProducerComponent : MonoBehaviour, IActionProvider
         
         Player owner = PlayerManager.Instance?.GetPlayer(buildingSelectable.ownerPlayerId);
         
-        if (owner != null && owner.HasResourcesForUnit(unitToBuild))
-        {
-            owner.UseResources(unitToBuild.creationCosts); // Cobra los recursos
-            queueComponent.AddTask(new UnitTask(unitToBuild, this, owner));
-        }
+        if (owner == null) return;
+        if (!owner.HasResourcesForUnit(unitToBuild) || !owner.HasPopulationFor(unitToBuild))
+            return;
+
+        if (unitToBuild.unitSpace > 0)
+            owner.AddPopulationReserved(unitToBuild.unitSpace);
+
+        owner.UseResources(unitToBuild.creationCosts);
+        queueComponent.AddTask(new UnitTask(unitToBuild, this, owner));
     }
 
     public Vector3 GetSpawnPosition()
@@ -93,12 +98,15 @@ public class UnitProducerComponent : MonoBehaviour, IActionProvider
         private readonly UnitProducerComponent producer;
         private readonly Player owner;
         private readonly Sprite icon;
+        private readonly int reservedSpace;
+        private bool reservationReleased;
 
         public UnitTask(UnitStats stats, UnitProducerComponent producer, Player owner)
         {
             this.stats = stats;
             this.producer = producer;
             this.owner = owner;
+            reservedSpace = stats != null ? Math.Max(0, stats.unitSpace) : 0;
             icon = stats.statsPerEra[stats.hasVisualEvolution ? owner.CurrentEra : 0].image;
         }
 
@@ -108,6 +116,8 @@ public class UnitProducerComponent : MonoBehaviour, IActionProvider
 
         public void Execute()
         {
+            ReleaseReservation();
+
             int currentEra = owner != null ? owner.CurrentEra : 0;
             
             // Selección del modelo por Era
@@ -119,7 +129,7 @@ public class UnitProducerComponent : MonoBehaviour, IActionProvider
 
             // Usamos la función auxiliar del productor
             Vector3 spawnPos = producer.GetSpawnPosition();
-            GameObject unitInstance = Object.Instantiate(prefabToSpawn, spawnPos, Quaternion.identity);
+            GameObject unitInstance = Instantiate(prefabToSpawn, spawnPos, Quaternion.identity);
             
             if (unitInstance.TryGetComponent(out Unit newUnit))
             {
@@ -135,8 +145,21 @@ public class UnitProducerComponent : MonoBehaviour, IActionProvider
         public void Cancel()
         {
             if (owner == null) return;
-            
+
+            ReleaseReservation();
             owner.RefundResources(stats.creationCosts);
+        }
+
+        private void ReleaseReservation()
+        {
+            if (reservationReleased || owner == null || reservedSpace <= 0)
+            {
+                reservationReleased = true;
+                return;
+            }
+
+            owner.RemovePopulationReserved(reservedSpace);
+            reservationReleased = true;
         }
     }
 }
