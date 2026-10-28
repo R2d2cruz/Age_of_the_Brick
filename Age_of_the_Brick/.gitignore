@@ -108,3 +108,8 @@ InitTestScene*.unity*
 Assets/TextMesh Pro
 Assets/TextMesh Pro.meta
 /Examples & Extras/
+
+# Local Cursor/agent config (not shipped with the game repo)
+.cursor/
+AGENTS.md
+docs/
