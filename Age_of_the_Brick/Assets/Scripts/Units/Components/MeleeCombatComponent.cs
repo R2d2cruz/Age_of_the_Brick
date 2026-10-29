@@ -12,12 +12,12 @@ public class MeleeCombatComponent : BaseCombatComponent
         if (distance > unit.GetInteractionRange()) return;
         if (currentTarget is Unit unitTarget)
         {
-            unitTarget.TakeDamage(unit.currentStats.lightAttack, unit.currentStats.heavyAttack);
+            unitTarget.TakeDamage(unit.currentStats.lightAttack, unit.currentStats.heavyAttack, unit);
             return;
         }
         if (currentTarget is Building buildingTarget)
         {
-            buildingTarget.TakeDamage(unit.currentStats.lightAttack, unit.currentStats.heavyAttack);
+            buildingTarget.TakeDamage(unit.currentStats.lightAttack, unit.currentStats.heavyAttack, unit);
             return;
         }
     }

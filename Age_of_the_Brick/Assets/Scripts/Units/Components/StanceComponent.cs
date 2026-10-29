@@ -73,7 +73,24 @@ public class StanceComponent : BaseUnitComponent
         returningToAnchor = false;
     }
 
-    public void NotifyAllyDamaged(Selectable damagedAlly, Selectable aggressor) { /* Task 4 */ }
+    /// <summary>
+    /// Called when a nearby ally takes damage from an enemy. Defensive units assist if the
+    /// aggressor is within vision of both the ally and this unit's anchor (leash).
+    /// </summary>
+    public void NotifyAllyDamaged(Selectable damagedAlly, Selectable aggressor)
+    {
+        if (CurrentStance != UnitStance.Defensive) return;
+        if (damagedAlly == null) return;
+        if (aggressor == null || aggressor.state != SelectableState.Alive) return;
+        if (!aggressor.IsEnemyTo(unit.ownerPlayerId)) return;
+        float vision = GetVisionRadius();
+        if (Vector3.Distance(unit.transform.position, damagedAlly.transform.position) > vision)
+            return;
+        if (Vector3.Distance(Anchor, aggressor.transform.position) > vision)
+            return; // still respect Defensive leash
+        if (!IsIdleEligible() && !stanceInitiatedCombat) return;
+        BeginStanceAttack(aggressor);
+    }
 
     private void Update()
     {

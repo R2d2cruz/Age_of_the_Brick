@@ -133,14 +133,14 @@ public class Projectile : MonoBehaviour
 
         if (hitSelectable is Unit unitTarget)
         {
-            unitTarget.TakeDamage(lightAttack, heavyAttack);
+            unitTarget.TakeDamage(lightAttack, heavyAttack, shooter);
             Destroy(gameObject);
             return;
         }
 
         if (hitSelectable is Building buildingTarget)
         {
-            buildingTarget.TakeDamage(lightAttack, heavyAttack);
+            buildingTarget.TakeDamage(lightAttack, heavyAttack, shooter);
             Destroy(gameObject);
         }
     }
