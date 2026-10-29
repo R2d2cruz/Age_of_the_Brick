@@ -87,8 +87,9 @@ public class BaseCombatComponent : BaseUnitComponent, IAttacker
     /// <param name="active">
     /// Whether the weapon should be visible.
     /// </param>
-    public void SetActiveWeapon(bool active)
+    public virtual void SetActiveWeapon(bool active)
     {
+        if (weapon == null) return;
         weapon.SetActive(active);
     }
 
