@@ -17,5 +17,5 @@ MonoBehaviour:
   defaultButtonType: 0
   commandName: Passive
   icon: {fileID: 0}
-  description: Never attack; flee or ignore enemies.
+  description: Never attack on its own; ignores enemies unless ordered.
   stanceToApply: 3

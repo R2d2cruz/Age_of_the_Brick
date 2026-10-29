@@ -27,6 +27,43 @@ public class UIActionButton : MonoBehaviour
 
     private Button button;
     private Image buttonImage;
+    private TextMeshProUGUI fallbackLabel;
+
+    /// <summary>
+    /// Shows <paramref name="text"/> centered on the button when the action has no icon
+    /// (so icon-less commands stay distinguishable). Pass null/empty to hide it.
+    /// The label is created lazily the first time text is needed.
+    /// </summary>
+    private void UpdateFallbackLabel(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            if (fallbackLabel != null) fallbackLabel.gameObject.SetActive(false);
+            return;
+        }
+
+        if (fallbackLabel == null)
+        {
+            var labelObject = new GameObject("FallbackLabel", typeof(RectTransform));
+            labelObject.transform.SetParent(transform, false);
+            var rect = (RectTransform)labelObject.transform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = new Vector2(2f, 2f);
+            rect.offsetMax = new Vector2(-2f, -2f);
+
+            fallbackLabel = labelObject.AddComponent<TextMeshProUGUI>();
+            fallbackLabel.alignment = TextAlignmentOptions.Center;
+            fallbackLabel.enableAutoSizing = true;
+            fallbackLabel.fontSizeMin = 8f;
+            fallbackLabel.fontSizeMax = 18f;
+            fallbackLabel.color = Color.white;
+            fallbackLabel.raycastTarget = false;
+        }
+
+        fallbackLabel.text = text;
+        fallbackLabel.gameObject.SetActive(true);
+    }
 
     /// <summary>
     /// Caches required component references.
@@ -55,6 +92,8 @@ public class UIActionButton : MonoBehaviour
             iconImage.sprite = action.icon;
             iconImage.gameObject.SetActive(action.icon != null);
         }
+
+        UpdateFallbackLabel(action.icon == null ? action.displayName : null);
 
         // Update background sprite
         buttonImage.color = Color.white;
@@ -115,6 +154,8 @@ public class UIActionButton : MonoBehaviour
             iconImage.sprite = null;
             iconImage.gameObject.SetActive(false);
         }
+
+        UpdateFallbackLabel(null);
 
         if (button != null)
         {

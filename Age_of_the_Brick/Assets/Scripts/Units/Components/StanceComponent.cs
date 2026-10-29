@@ -1,14 +1,18 @@
 using UnityEngine;
 
 /// <summary>
-/// Tracks unit combat stance, anchor position, and periodic stance evaluation.
-/// Behavior is filled in by later tasks.
+/// Tracks unit combat stance (Aggressive, Defensive, Hold Position, Passive), the anchor position,
+/// and periodically evaluates auto-engagement, leashing, and return-to-anchor behavior.
+/// Player orders (move/attack) override stance-driven actions.
 /// </summary>
 public class StanceComponent : BaseUnitComponent
 {
     [SerializeField] private float evaluateInterval = 0.35f;
 
+    /// <summary>Active stance for this unit.</summary>
     public UnitStance CurrentStance { get; private set; } = UnitStance.Aggressive;
+
+    /// <summary>World position guarded by Defensive/Hold stances.</summary>
     public Vector3 Anchor { get; private set; }
 
     private IAttacker attacker;
@@ -16,8 +20,11 @@ public class StanceComponent : BaseUnitComponent
     private bool stanceInitiatedCombat;
     private bool returningToAnchor;
     private bool issuingStanceMove;
+    private bool pendingReturnAfterPlayerCombat;
     private Selectable stanceTarget;
 
+    /// <summary>Caches the attacker, sets the initial anchor and defaults to Aggressive.</summary>
+    /// <param name="coreUnit">Owning unit.</param>
     public override void Initialize(Unit coreUnit)
     {
         base.Initialize(coreUnit);
@@ -40,6 +47,7 @@ public class StanceComponent : BaseUnitComponent
     {
         ClearStanceCombat();
         returningToAnchor = false;
+        pendingReturnAfterPlayerCombat = false;
     }
 
     /// <summary>
@@ -50,8 +58,16 @@ public class StanceComponent : BaseUnitComponent
     {
         if (stanceInitiatedCombat && target == stanceTarget) return;
         NotifyPlayerOrder();
+
+        // Defensive units walk back to their anchor once the player-ordered fight ends.
+        if (CurrentStance == UnitStance.Defensive)
+            pendingReturnAfterPlayerCombat = true;
     }
 
+    /// <summary>
+    /// Changes the stance. Cancels stance-owned combat and, for Defensive/Hold, anchors at the current position.
+    /// </summary>
+    /// <param name="stance">New stance to apply.</param>
     public void SetStance(UnitStance stance)
     {
         if (stanceInitiatedCombat && attacker != null)
@@ -60,12 +76,19 @@ public class StanceComponent : BaseUnitComponent
         CurrentStance = stance;
         ClearStanceCombat();
         returningToAnchor = false;
+        pendingReturnAfterPlayerCombat = false;
         if (stance == UnitStance.Defensive || stance == UnitStance.HoldPosition)
             SetAnchor(unit.transform.position);
     }
 
+    /// <summary>Sets the world position Defensive/Hold units guard and return to.</summary>
+    /// <param name="worldPosition">New anchor position.</param>
     public void SetAnchor(Vector3 worldPosition) => Anchor = worldPosition;
 
+    /// <summary>
+    /// Called when a move order finishes. Defensive/Hold units re-anchor at the destination.
+    /// </summary>
+    /// <param name="destination">Position the unit was moving to.</param>
     public void OnMoveCompleted(Vector3 destination)
     {
         if (CurrentStance == UnitStance.Defensive || CurrentStance == UnitStance.HoldPosition)
@@ -83,6 +106,12 @@ public class StanceComponent : BaseUnitComponent
         if (damagedAlly == null) return;
         if (aggressor == null || aggressor.state != SelectableState.Alive) return;
         if (!aggressor.IsEnemyTo(unit.ownerPlayerId)) return;
+
+        // Already fighting under stance control: re-issuing Attack would reset the Attack state on every hit.
+        if (stanceInitiatedCombat
+            && (aggressor == stanceTarget || unit.BehaviourState == UnitBehaviourState.Attacking))
+            return;
+
         float vision = GetVisionRadius();
         if (Vector3.Distance(unit.transform.position, damagedAlly.transform.position) > vision)
             return;
@@ -150,6 +179,17 @@ public class StanceComponent : BaseUnitComponent
                     ReturnToAnchor();
             }
             return;
+        }
+
+        // Player-ordered combat finished while Defensive: walk back to the anchor.
+        if (pendingReturnAfterPlayerCombat && unit.BehaviourState == UnitBehaviourState.Idle)
+        {
+            pendingReturnAfterPlayerCombat = false;
+            if (CurrentStance == UnitStance.Defensive)
+            {
+                ReturnToAnchor();
+                return;
+            }
         }
 
         if (!IsIdleEligible()) return;
@@ -225,6 +265,7 @@ public class StanceComponent : BaseUnitComponent
     {
         if (attacker == null || target == null) return;
         stanceInitiatedCombat = true;
+        pendingReturnAfterPlayerCombat = false;
         stanceTarget = target;
         attacker.Attack(target);
     }

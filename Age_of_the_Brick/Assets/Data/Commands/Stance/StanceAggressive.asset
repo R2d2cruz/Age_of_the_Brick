@@ -15,7 +15,7 @@ MonoBehaviour:
   defaultGridIndex: 10
   defaultHotkey: 0
   defaultButtonType: 0
-  commandName: Aggressive
+  commandName: Aggro
   icon: {fileID: 0}
   description: Attack enemies in sight and pursue them.
   stanceToApply: 0

@@ -15,7 +15,7 @@ MonoBehaviour:
   defaultGridIndex: 12
   defaultHotkey: 0
   defaultButtonType: 0
-  commandName: Hold Position
+  commandName: Hold
   icon: {fileID: 0}
   description: Stand ground; only attack targets within range.
   stanceToApply: 2
