@@ -54,5 +54,152 @@ public class StanceComponent : BaseUnitComponent
         Evaluate();
     }
 
-    public void Evaluate() { /* Tasks 3–4 fill behavior */ }
+    /// <summary>
+    /// Periodic stance policy: auto-engage, leash, hold and return-to-anchor decisions.
+    /// </summary>
+    public void Evaluate()
+    {
+        if (attacker == null) return;
+        float vision = GetVisionRadius();
+        float attackRange = unit.GetInteractionRange();
+
+        if (stanceInitiatedCombat)
+        {
+            Selectable liveTarget = FindActiveStanceTarget();
+
+            if (CurrentStance == UnitStance.HoldPosition)
+            {
+                if (liveTarget == null
+                    || unit.GetDistanceToTargetSurface(liveTarget) > attackRange
+                    || unit.BehaviourState == UnitBehaviourState.Moving)
+                {
+                    attacker.StopAttacking();
+                    ClearStanceCombat();
+                    return;
+                }
+            }
+
+            if (CurrentStance == UnitStance.Defensive)
+            {
+                if (liveTarget == null
+                    || Vector3.Distance(Anchor, liveTarget.transform.position) > vision)
+                {
+                    ReturnToAnchor();
+                    return;
+                }
+            }
+
+            if (CurrentStance == UnitStance.Passive)
+            {
+                attacker.StopAttacking();
+                ClearStanceCombat();
+                return;
+            }
+
+            // Aggressive: keep fighting until combat stops itself (target dead -> Idle).
+            if (unit.BehaviourState == UnitBehaviourState.Idle)
+            {
+                ClearStanceCombat();
+                if (CurrentStance == UnitStance.Defensive)
+                    ReturnToAnchor();
+            }
+            return;
+        }
+
+        if (!IsIdleEligible()) return;
+        if (CurrentStance == UnitStance.Passive) return;
+
+        if (CurrentStance == UnitStance.Aggressive)
+        {
+            Selectable target = FindNearestEnemyFrom(unit.transform.position, vision);
+            if (target != null) BeginStanceAttack(target);
+            return;
+        }
+
+        if (CurrentStance == UnitStance.Defensive)
+        {
+            Selectable target = FindNearestEnemyFrom(Anchor, vision);
+            if (target != null) BeginStanceAttack(target);
+            return;
+        }
+
+        if (CurrentStance == UnitStance.HoldPosition)
+        {
+            Selectable target = FindNearestEnemyFrom(unit.transform.position, attackRange + 0.5f);
+            if (target != null && unit.GetDistanceToTargetSurface(target) <= attackRange)
+                BeginStanceAttack(target);
+        }
+    }
+
+    private float GetVisionRadius()
+    {
+        return (unit.currentStats != null && unit.currentStats.visionRange > 0)
+            ? unit.currentStats.visionRange
+            : 12f;
+    }
+
+    private Selectable FindNearestEnemyFrom(Vector3 origin, float radius)
+    {
+        Collider[] hits = Physics.OverlapSphere(origin, radius);
+        Selectable best = null;
+        float bestDist = float.PositiveInfinity;
+
+        foreach (Collider hit in hits)
+        {
+            Selectable candidate = hit.GetComponentInParent<Selectable>();
+            if (candidate == null || candidate == unit) continue;
+            if (candidate.state != SelectableState.Alive) continue;
+            if (!candidate.IsEnemyTo(unit.ownerPlayerId)) continue;
+            if (candidate is not Unit && candidate is not Building) continue;
+
+            float dist = Vector3.Distance(origin, candidate.transform.position);
+            if (dist < bestDist)
+            {
+                bestDist = dist;
+                best = candidate;
+            }
+        }
+        return best;
+    }
+
+    private bool IsIdleEligible()
+    {
+        if (returningToAnchor) return false;
+        // Player-ordered combat or movement: do not steal control.
+        if (!stanceInitiatedCombat && unit.BehaviourState == UnitBehaviourState.Attacking)
+            return false;
+        if (!stanceInitiatedCombat && unit.BehaviourState == UnitBehaviourState.Moving)
+            return false;
+        return unit.BehaviourState == UnitBehaviourState.Idle
+            || stanceInitiatedCombat;
+    }
+
+    private void BeginStanceAttack(Selectable target)
+    {
+        if (attacker == null || target == null) return;
+        stanceInitiatedCombat = true;
+        stanceTarget = target;
+        attacker.Attack(target);
+    }
+
+    private Selectable FindActiveStanceTarget()
+    {
+        if (stanceTarget == null || stanceTarget.state != SelectableState.Alive)
+            return null;
+        return stanceTarget;
+    }
+
+    private void ClearStanceCombat()
+    {
+        stanceInitiatedCombat = false;
+        stanceTarget = null;
+    }
+
+    private void ReturnToAnchor()
+    {
+        if (attacker != null) attacker.StopAttacking();
+        ClearStanceCombat();
+        returningToAnchor = true;
+        unit.MoveTo(Anchor);
+    }
 }

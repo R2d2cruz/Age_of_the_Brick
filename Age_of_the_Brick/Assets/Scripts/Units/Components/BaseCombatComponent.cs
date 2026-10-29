@@ -204,17 +204,9 @@ public class BaseCombatComponent : BaseUnitComponent, IAttacker
         {
             if (baseCombatComponent.currentTarget == null || baseCombatComponent.currentTarget.state != SelectableState.Alive)
             {
-                Unit newTarget = baseCombatComponent.FindNearestEnemy();
-                if (newTarget != null)
-                {
-                    baseCombatComponent.currentTarget = newTarget;
-                    SetSubState(CombatSubState.MovingToTarget);
-                }
-                else
-                {
-                    baseCombatComponent.StopAttacking();
-                    return; // Retornamos temprano porque StopAttacking ya cambió el estado a Idle
-                }
+                // Target lost or dead: stop combat. StanceComponent re-acquires targets on its own timer.
+                baseCombatComponent.StopAttacking();
+                return; // StopAttacking already switched the unit to Idle.
             }
 
             // Execute the current sub-state logic.
