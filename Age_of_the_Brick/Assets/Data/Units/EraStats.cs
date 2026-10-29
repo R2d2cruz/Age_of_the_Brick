@@ -92,6 +92,21 @@ public class EraStats
     [Tooltip("Damage multiplier against buildings.")]
     public int buildingMultiplier;
 
+    /// <summary>
+    /// Seconds a ranged projectile actively homes toward a live target
+    /// before locking to the target's last known position.
+    /// Non-ranged units leave this at zero.
+    /// </summary>
+    [Tooltip("Seconds of projectile homing before locking last position.")]
+    public float projectileTrackTime;
+
+    /// <summary>
+    /// Travel speed of a ranged projectile along its arc, in world units per second.
+    /// Non-ranged units leave this at zero.
+    /// </summary>
+    [Tooltip("Projectile travel speed along the arc (units/second).")]
+    public float projectileSpeed;
+
     // -------------------------
     // SUPPORT
     // -------------------------
