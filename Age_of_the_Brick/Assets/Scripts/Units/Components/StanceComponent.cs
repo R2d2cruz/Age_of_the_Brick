@@ -79,6 +79,9 @@ public class StanceComponent : BaseUnitComponent
     {
         if (unit == null || unit.state != SelectableState.Alive) return;
 
+        if (returningToAnchor && unit.BehaviourState == UnitBehaviourState.Idle)
+            returningToAnchor = false;
+
         // Hold must never chase: check every frame, not only on the evaluate interval.
         if (stanceInitiatedCombat && CurrentStance == UnitStance.HoldPosition && HoldGuard())
             return;
@@ -151,7 +154,7 @@ public class StanceComponent : BaseUnitComponent
 
         if (CurrentStance == UnitStance.HoldPosition)
         {
-            Selectable target = FindNearestEnemyFrom(unit.transform.position, attackRange + 0.5f);
+            Selectable target = FindNearestEnemyFrom(unit.transform.position, attackRange + 0.5f, requirePivotWithinRadius: false);
             if (target != null && unit.GetDistanceToTargetSurface(target) <= attackRange)
                 BeginStanceAttack(target);
         }
@@ -164,7 +167,7 @@ public class StanceComponent : BaseUnitComponent
             : 12f;
     }
 
-    private Selectable FindNearestEnemyFrom(Vector3 origin, float radius)
+    private Selectable FindNearestEnemyFrom(Vector3 origin, float radius, bool requirePivotWithinRadius = true)
     {
         Collider[] hits = Physics.OverlapSphere(origin, radius);
         Selectable best = null;
@@ -179,7 +182,7 @@ public class StanceComponent : BaseUnitComponent
             if (candidate is not Unit && candidate is not Building) continue;
 
             float dist = Vector3.Distance(origin, candidate.transform.position);
-            if (dist > radius) continue; // Same metric as the leash check (pivot distance).
+            if (requirePivotWithinRadius && dist > radius) continue;
             if (dist < bestDist)
             {
                 bestDist = dist;
