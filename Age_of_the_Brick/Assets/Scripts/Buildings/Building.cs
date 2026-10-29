@@ -195,6 +195,15 @@ public class Building : Selectable, IActionProvider
     /// </param>
     public void TakeDamage(int lightDamage, int heavyDamage)
     {
+        TakeDamage(lightDamage, heavyDamage, null);
+    }
+
+    /// <summary>
+    /// Applies incoming damage considering defenses. The <paramref name="source"/> is accepted for API
+    /// consistency with <see cref="Unit.TakeDamage(int, int, Selectable)"/>; buildings do not broadcast assist.
+    /// </summary>
+    public void TakeDamage(int lightDamage, int heavyDamage, Selectable source)
+    {
         int finalDamage = Mathf.Max(0, lightDamage - currentStats.lightDefense) +
                           Mathf.Max(0, heavyDamage - currentStats.heavyDefense);
 

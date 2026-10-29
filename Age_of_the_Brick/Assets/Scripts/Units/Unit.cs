@@ -22,6 +22,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     protected Animator animator;              // Animation controller.
     protected String currentAnimation = "idle";
     private NavMeshAgent agent;             // Navigation and pathfinding agent.
+    private Vector3 lastMoveDestination;
     private Renderer rend;                  // Main model renderer.
 
     /// <summary>
@@ -535,14 +536,25 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
 
     public void MoveTo(Vector3 destination)
     {
+        // Player/system moves override stance state; the stance's own return-to-anchor move does not.
+        StanceComponent stance = GetComponent<StanceComponent>();
+        if (stance != null && !stance.IsIssuingStanceMove)
+            stance.NotifyPlayerOrder();
+
+        lastMoveDestination = destination;
         if (agent != null)
         {
             agent.isStopped = false;
             agent.SetDestination(destination);
         }
 
-        // If MoveState needs parameters, configure them before changing state
         ChangeToMoveState(destination);
+    }
+
+    private void NotifyMoveCompleted()
+    {
+        StanceComponent stance = GetComponent<StanceComponent>();
+        stance?.OnMoveCompleted(lastMoveDestination);
     }
 
 
@@ -552,12 +564,25 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     /// </summary>
     public void TakeDamage(int lightDamage, int heavyDamage)
     {
+        TakeDamage(lightDamage, heavyDamage, null);
+    }
+
+    /// <summary>
+    /// Applies incoming damage considering defenses. When <paramref name="source"/> is an enemy,
+    /// nearby allied units with a Defensive stance are pinged to assist. A null source (e.g. self-destruct)
+    /// never triggers assist.
+    /// </summary>
+    public void TakeDamage(int lightDamage, int heavyDamage, Selectable source)
+    {
         if (state == SelectableState.Dead) return;
 
         int finalDamage = Mathf.Max(0, lightDamage - currentStats.lightDefense) +
                           Mathf.Max(0, heavyDamage - currentStats.heavyDefense);
 
         currentHealth -= finalDamage;
+
+        if (source != null && source.IsEnemyTo(ownerPlayerId))
+            BroadcastAssist(source);
 
         if (currentHealth <= 0f && state == SelectableState.Alive)
         {
@@ -566,6 +591,22 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
         }
 
         HealthBarsManager.Instance.UpdateUnitHealth(this, currentHealth, currentStats.health);
+    }
+
+    private void BroadcastAssist(Selectable aggressor)
+    {
+        float radius = (currentStats != null && currentStats.visionRange > 0)
+            ? currentStats.visionRange
+            : 12f;
+        Collider[] hits = Physics.OverlapSphere(transform.position, radius);
+        foreach (Collider hit in hits)
+        {
+            Unit ally = hit.GetComponentInParent<Unit>();
+            if (ally == null || ally == this) continue;
+            if (ally.ownerPlayerId != ownerPlayerId) continue;
+            StanceComponent stance = ally.GetComponent<StanceComponent>();
+            stance?.NotifyAllyDamaged(this, aggressor);
+        }
     }
 
     public void Heal(float amount)
@@ -657,6 +698,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
             }
             else
             {
+                unit.NotifyMoveCompleted();
                 unit.ChangeToIdleState();
             }
         }

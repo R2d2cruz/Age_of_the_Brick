@@ -84,6 +84,26 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: 9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d, type: 2}
     - target: {fileID: 636434591679791306, guid: 515e9b885ea1df34ba11ad39dc6b3a25, type: 3}
+      propertyPath: mainCommands.Array.size
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 636434591679791306, guid: 515e9b885ea1df34ba11ad39dc6b3a25, type: 3}
+      propertyPath: 'mainCommands.Array.data[0]'
+      value: 
+      objectReference: {fileID: 11400000, guid: c3203b0552404179af96b2c4e0a5a5d7, type: 2}
+    - target: {fileID: 636434591679791306, guid: 515e9b885ea1df34ba11ad39dc6b3a25, type: 3}
+      propertyPath: 'mainCommands.Array.data[1]'
+      value: 
+      objectReference: {fileID: 11400000, guid: 9b26e1af60f54e15b1619cfe474275e6, type: 2}
+    - target: {fileID: 636434591679791306, guid: 515e9b885ea1df34ba11ad39dc6b3a25, type: 3}
+      propertyPath: 'mainCommands.Array.data[2]'
+      value: 
+      objectReference: {fileID: 11400000, guid: fea272798ebb48a9aa10e9adae3f5849, type: 2}
+    - target: {fileID: 636434591679791306, guid: 515e9b885ea1df34ba11ad39dc6b3a25, type: 3}
+      propertyPath: 'mainCommands.Array.data[3]'
+      value: 
+      objectReference: {fileID: 11400000, guid: a23fa13e82a34c03bde2b63c042321f5, type: 2}
+    - target: {fileID: 636434591679791306, guid: 515e9b885ea1df34ba11ad39dc6b3a25, type: 3}
       propertyPath: meshesToRecolor.Array.size
       value: 4
       objectReference: {fileID: 0}
@@ -128,6 +148,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5629039364720240478, guid: 515e9b885ea1df34ba11ad39dc6b3a25, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8197099461657429098}
+    - targetCorrespondingSourceObject: {fileID: 5629039364720240478, guid: 515e9b885ea1df34ba11ad39dc6b3a25, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8197099461657429099}
   m_SourcePrefab: {fileID: 100100000, guid: 515e9b885ea1df34ba11ad39dc6b3a25, type: 3}
 --- !u!4 &4247434297121695267 stripped
 Transform:
@@ -154,6 +177,19 @@ MonoBehaviour:
   weapon: {fileID: 0}
   projectilePrefab: {fileID: 1000000000000000001, guid: d8e9f0a1b2c34d5e6f7a8b9c0d1e2f3a, type: 3}
   projectileSpawnPoint: {fileID: 3380104234866012095}
+--- !u!114 &8197099461657429099
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8143987420996798630}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 96ca7921431822a44b24782f59b6e8e1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StanceComponent
+  evaluateInterval: 0.35
 --- !u!1001 &6412947714627783530
 PrefabInstance:
   m_ObjectHideFlags: 0
