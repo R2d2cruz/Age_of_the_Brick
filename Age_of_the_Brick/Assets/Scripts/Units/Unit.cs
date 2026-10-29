@@ -22,6 +22,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     protected Animator animator;              // Animation controller.
     protected String currentAnimation = "idle";
     private NavMeshAgent agent;             // Navigation and pathfinding agent.
+    private Vector3 lastMoveDestination;
     private Renderer rend;                  // Main model renderer.
 
     /// <summary>
@@ -535,14 +536,20 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
 
     public void MoveTo(Vector3 destination)
     {
+        lastMoveDestination = destination;
         if (agent != null)
         {
             agent.isStopped = false;
             agent.SetDestination(destination);
         }
 
-        // If MoveState needs parameters, configure them before changing state
         ChangeToMoveState(destination);
+    }
+
+    private void NotifyMoveCompleted()
+    {
+        StanceComponent stance = GetComponent<StanceComponent>();
+        stance?.OnMoveCompleted(lastMoveDestination);
     }
 
 
@@ -657,6 +664,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
             }
             else
             {
+                unit.NotifyMoveCompleted();
                 unit.ChangeToIdleState();
             }
         }
