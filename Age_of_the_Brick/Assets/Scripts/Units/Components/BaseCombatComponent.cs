@@ -54,6 +54,9 @@ public class BaseCombatComponent : BaseUnitComponent, IAttacker
             unit.Wait();
             return;
         }
+        // Keep stance ownership only for the stance's own target; otherwise the player took over.
+        unit.GetComponent<StanceComponent>()?.AcknowledgeAttack(target);
+
         currentTarget = target;
         unit.ChangeState(attackState);
     }

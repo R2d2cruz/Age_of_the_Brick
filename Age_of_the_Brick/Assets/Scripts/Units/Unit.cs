@@ -536,6 +536,11 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
 
     public void MoveTo(Vector3 destination)
     {
+        // Player/system moves override stance state; the stance's own return-to-anchor move does not.
+        StanceComponent stance = GetComponent<StanceComponent>();
+        if (stance != null && !stance.IsIssuingStanceMove)
+            stance.NotifyPlayerOrder();
+
         lastMoveDestination = destination;
         if (agent != null)
         {

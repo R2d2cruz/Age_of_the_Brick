@@ -15,6 +15,7 @@ public class StanceComponent : BaseUnitComponent
     private float evaluateTimer;
     private bool stanceInitiatedCombat;
     private bool returningToAnchor;
+    private bool issuingStanceMove;
     private Selectable stanceTarget;
 
     public override void Initialize(Unit coreUnit)
@@ -25,10 +26,39 @@ public class StanceComponent : BaseUnitComponent
         CurrentStance = UnitStance.Aggressive;
     }
 
+    /// <summary>True while the stance itself is issuing a move (return to anchor).</summary>
+    public bool IsIssuingStanceMove => issuingStanceMove;
+
+    /// <summary>True while the unit walks back to its anchor under stance control.</summary>
+    public bool IsReturningToAnchor => returningToAnchor;
+
+    /// <summary>
+    /// Called when a player/system order (move, etc.) overrides stance-driven behavior.
+    /// Clears stance combat ownership and return-to-anchor state.
+    /// </summary>
+    public void NotifyPlayerOrder()
+    {
+        ClearStanceCombat();
+        returningToAnchor = false;
+    }
+
+    /// <summary>
+    /// Called by the combat component whenever an attack is assigned. Keeps stance ownership only
+    /// when the target is the one the stance chose; otherwise the player took over.
+    /// </summary>
+    public void AcknowledgeAttack(Selectable target)
+    {
+        if (stanceInitiatedCombat && target == stanceTarget) return;
+        NotifyPlayerOrder();
+    }
+
     public void SetStance(UnitStance stance)
     {
+        if (stanceInitiatedCombat && attacker != null)
+            attacker.StopAttacking();
+
         CurrentStance = stance;
-        stanceInitiatedCombat = false;
+        ClearStanceCombat();
         returningToAnchor = false;
         if (stance == UnitStance.Defensive || stance == UnitStance.HoldPosition)
             SetAnchor(unit.transform.position);
@@ -48,6 +78,11 @@ public class StanceComponent : BaseUnitComponent
     private void Update()
     {
         if (unit == null || unit.state != SelectableState.Alive) return;
+
+        // Hold must never chase: check every frame, not only on the evaluate interval.
+        if (stanceInitiatedCombat && CurrentStance == UnitStance.HoldPosition && HoldGuard())
+            return;
+
         evaluateTimer += Time.deltaTime;
         if (evaluateTimer < evaluateInterval) return;
         evaluateTimer = 0f;
@@ -67,17 +102,8 @@ public class StanceComponent : BaseUnitComponent
         {
             Selectable liveTarget = FindActiveStanceTarget();
 
-            if (CurrentStance == UnitStance.HoldPosition)
-            {
-                if (liveTarget == null
-                    || unit.GetDistanceToTargetSurface(liveTarget) > attackRange
-                    || unit.BehaviourState == UnitBehaviourState.Moving)
-                {
-                    attacker.StopAttacking();
-                    ClearStanceCombat();
-                    return;
-                }
-            }
+            if (CurrentStance == UnitStance.HoldPosition && HoldGuard())
+                return;
 
             if (CurrentStance == UnitStance.Defensive)
             {
@@ -153,6 +179,7 @@ public class StanceComponent : BaseUnitComponent
             if (candidate is not Unit && candidate is not Building) continue;
 
             float dist = Vector3.Distance(origin, candidate.transform.position);
+            if (dist > radius) continue; // Same metric as the leash check (pivot distance).
             if (dist < bestDist)
             {
                 bestDist = dist;
@@ -195,11 +222,32 @@ public class StanceComponent : BaseUnitComponent
         stanceTarget = null;
     }
 
+    /// <summary>
+    /// Hold-position guard: cancels stance combat if the target is gone, out of range,
+    /// or the unit started moving (chasing). Returns true when combat was cancelled.
+    /// </summary>
+    private bool HoldGuard()
+    {
+        if (attacker == null) return false;
+        Selectable liveTarget = FindActiveStanceTarget();
+        if (liveTarget == null
+            || unit.GetDistanceToTargetSurface(liveTarget) > unit.GetInteractionRange()
+            || unit.BehaviourState == UnitBehaviourState.Moving)
+        {
+            attacker.StopAttacking();
+            ClearStanceCombat();
+            return true;
+        }
+        return false;
+    }
+
     private void ReturnToAnchor()
     {
         if (attacker != null) attacker.StopAttacking();
         ClearStanceCombat();
-        returningToAnchor = true;
+        issuingStanceMove = true;
         unit.MoveTo(Anchor);
+        issuingStanceMove = false;
+        returningToAnchor = true;
     }
 }
