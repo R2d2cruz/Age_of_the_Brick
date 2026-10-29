@@ -15,6 +15,7 @@ public class PlayerManager : MonoBehaviour
 
     [Header("UI References")]
     [SerializeField] private UIResourceBar resourceBarUI;
+    [SerializeField] private UICivController civControllerUI;
 
     [Header("Default Materials for Players")]
     public Material[] defaultMaterials;
@@ -70,6 +71,11 @@ public class PlayerManager : MonoBehaviour
             if (resourceBarUI != null)
             {
                 resourceBarUI.Initialize(player);
+            }
+
+            if (civControllerUI != null)
+            {
+                civControllerUI.Initialize(player);
             }
 
             // Notify SelectionHandler, CommandHandler, etc.

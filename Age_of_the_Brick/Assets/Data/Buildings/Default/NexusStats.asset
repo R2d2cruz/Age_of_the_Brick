@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   buildingName: Nexos
   description: Nexo de recursos
-  populationProvided: 0
+  populationProvided: 10
   constructionCosts:
     entries:
     - Key: 0
