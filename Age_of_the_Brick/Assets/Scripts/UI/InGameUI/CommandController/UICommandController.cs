@@ -103,6 +103,7 @@ public class UICommandController : MonoBehaviour
         if (localPlayer != null)
         {
             localPlayer.OnResourceChanged -= HandleResourceChanged;
+            localPlayer.OnTechResearched -= HandleTechResearched;
         }
 
         if (activeQueue != null)
@@ -123,6 +124,7 @@ public class UICommandController : MonoBehaviour
         if (localPlayer != null)
         {
             localPlayer.OnResourceChanged -= HandleResourceChanged;
+            localPlayer.OnTechResearched -= HandleTechResearched;
         }
 
         localPlayer = newLocalPlayer;
@@ -130,6 +132,7 @@ public class UICommandController : MonoBehaviour
         if (localPlayer != null)
         {
             localPlayer.OnResourceChanged += HandleResourceChanged;
+            localPlayer.OnTechResearched += HandleTechResearched;
         }
     }
 
@@ -138,6 +141,18 @@ public class UICommandController : MonoBehaviour
     /// Refreshes button interactability in real time.
     /// </summary>
     private void HandleResourceChanged(ResourceType type, int amount)
+    {
+        if (commandPanelContainer.activeSelf)
+        {
+            RefreshGrid();
+        }
+    }
+
+    /// <summary>
+    /// Triggered when the local player completes a tech research.
+    /// Refreshes the command grid so researched commands hide immediately.
+    /// </summary>
+    private void HandleTechResearched(TechSO tech)
     {
         if (commandPanelContainer.activeSelf)
         {
