@@ -116,39 +116,90 @@ public class Building : Selectable, IActionProvider
 
     /// <summary>
     /// Initializes the building and assigns its owner.
-    /// Registers the building in the owner's registry and loads
-    /// stats corresponding to the current era.
+    /// Registers the building in the owner's registry, subscribes to era and tech
+    /// changes, and loads stats for the current era including researched flats.
     /// </summary>
     /// <param name="owner">
     /// Player that owns the building.
     /// </param>
     public void Initialize(Player owner)
     {
+        UnsubscribeFromOwner();
         Owner = owner;
         ownerPlayerId = owner.playerId;
-        UpdateStats(owner.CurrentEra);
+        SubscribeToOwner();
+        RefreshStats(owner.CurrentEra);
 
         if (currentHealth <= 0) currentHealth = currentStats.health;
 
         owner.Registry.RegisterBuilding(this);
     }
 
+    private void SubscribeToOwner()
+    {
+        if (Owner == null) return;
+        Owner.OnEraChanged += HandleEraChange;
+        Owner.OnTechResearched += HandleTechResearched;
+    }
+
+    private void UnsubscribeFromOwner()
+    {
+        if (Owner == null) return;
+        Owner.OnEraChanged -= HandleEraChange;
+        Owner.OnTechResearched -= HandleTechResearched;
+    }
+
+    private void HandleEraChange(int newEra) => RefreshStats(newEra);
+
+    private void HandleTechResearched(TechSO _) => RefreshStats();
+
     /// <summary>
-    /// Updates the building statistics according to the specified era.
-    /// Preserves the current health percentage whenever possible.
+    /// Updates stats for the given era, including researched tech flats, and keeps health proportional.
     /// </summary>
     /// <param name="era">
     /// Era index to load.
     /// </param>
-    public void UpdateStats(int era)
+    public void UpdateStats(int era) => RefreshStats(era);
+
+    /// <summary>
+    /// Recomputes runtime stats from the owner's current era base plus researched tech flats.
+    /// </summary>
+    public void RefreshStats()
     {
+        if (Owner != null)
+            RefreshStats(Owner.CurrentEra);
+        else
+            RefreshStats(0);
+    }
+
+    /// <summary>
+    /// Clones the era base stats and applies matching researched tech modifiers without mutating the ScriptableObject.
+    /// </summary>
+    private void RefreshStats(int era)
+    {
+        if (stats == null || stats.statsPerEra == null || stats.statsPerEra.Length == 0) return;
+        int clampedEra = Mathf.Clamp(era, 0, stats.statsPerEra.Length - 1);
+
         EraStatsBuilding oldStats = currentStats;
-        currentStats = stats.statsPerEra[era];
+        EraStatsBuilding next = TechStatApply.CloneEraStatsBuilding(stats.statsPerEra[clampedEra]);
+        if (next == null) return;
+
+        if (Owner != null)
+        {
+            foreach (TechSO tech in Owner.ResearchedTechs)
+            {
+                if (tech == null) continue;
+                if (!TechStatApply.MatchesBuilding(tech, stats)) continue;
+                TechStatApply.ApplyBuildingModifiers(next, tech.buildingModifiers);
+            }
+        }
+
+        currentStats = next;
 
         if (oldStats != null && oldStats.health > 0)
         {
-            float porcentaje = currentHealth / oldStats.health;
-            currentHealth = Mathf.Clamp(currentStats.health * porcentaje, 0f, currentStats.health);
+            float percent = currentHealth / oldStats.health;
+            currentHealth = Mathf.Clamp(currentStats.health * percent, 0f, currentStats.health);
         }
         else
         {
@@ -229,6 +280,7 @@ public class Building : Selectable, IActionProvider
 
     private void OnDestroy()
     {
+        UnsubscribeFromOwner();
         if (Owner != null)
             Owner.Registry.UnregisterBuilding(this);
     }
