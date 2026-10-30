@@ -275,14 +275,21 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
 
     private void SubscribeToOwner()
     {
-        if (Owner != null)
-            Owner.OnEraChanged += HandleEraChange;
+        if (Owner == null) return;
+        Owner.OnEraChanged += HandleEraChange;
+        Owner.OnTechResearched += HandleTechResearched;
     }
 
     private void UnsubscribeFromOwner()
     {
-        if (Owner != null)
-            Owner.OnEraChanged -= HandleEraChange;
+        if (Owner == null) return;
+        Owner.OnEraChanged -= HandleEraChange;
+        Owner.OnTechResearched -= HandleTechResearched;
+    }
+
+    private void HandleTechResearched(TechSO _)
+    {
+        RefreshStats();
     }
 
     // ============================================================
@@ -313,27 +320,65 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     // ============================================================
 
     /// <summary>
-    /// Updates stats according to the era, maintaining health proportionally.
+    /// Updates stats for the given era, including researched tech flats, and keeps health proportional.
     /// </summary>
     public virtual void UpdateStats(int era)
     {
+        RefreshStats(era);
+    }
+
+    /// <summary>
+    /// Recomputes runtime stats from the owner's current era base plus researched tech flats.
+    /// </summary>
+    public void RefreshStats()
+    {
+        if (Owner != null)
+            RefreshStats(Owner.CurrentEra);
+        else
+            RefreshStats(0);
+    }
+
+    /// <summary>
+    /// Clones the era base stats and applies matching researched tech modifiers without mutating the ScriptableObject.
+    /// </summary>
+    private void RefreshStats(int era)
+    {
+        if (stats == null || stats.statsPerEra == null || stats.statsPerEra.Length == 0) return;
+        int clampedEra = Mathf.Clamp(era, 0, stats.statsPerEra.Length - 1);
+
         EraStats oldStats = currentStats;
-        currentStats = stats.statsPerEra[era];
+        EraStats next = TechStatApply.CloneEraStats(stats.statsPerEra[clampedEra]);
+        if (next == null) return;
+
+        if (Owner != null)
+        {
+            foreach (TechSO tech in Owner.ResearchedTechs)
+            {
+                if (tech == null) continue;
+                if (!TechStatApply.MatchesUnit(tech, stats)) continue;
+                TechStatApply.ApplyUnitModifiers(next, tech.unitModifiers);
+            }
+        }
+
+        currentStats = next;
 
         if (oldStats != null && oldStats.health > 0)
         {
             float healthPercent = currentHealth / oldStats.health;
             currentHealth = Mathf.Clamp(currentStats.health * healthPercent, 0.0f, currentStats.health);
         }
-        else currentHealth = currentStats.health;
+        else
+        {
+            currentHealth = currentStats.health;
+        }
 
         if (agent != null)
             agent.speed = currentStats.moveSpeed;
 
         ChangeAnimatorMultiplier("moveSpeedMultiplier", currentStats.moveSpeed);
-        if (TryGetComponent(out IGatherer gatherer)) gatherer.OnEraChanged(era);
-        if (TryGetComponent(out IAttacker attacker)) attacker.OnEraChanged(era);
-        if (TryGetComponent(out IBuilder builder)) builder.OnEraChanged(era);
+        if (TryGetComponent(out IGatherer gatherer)) gatherer.OnEraChanged(clampedEra);
+        if (TryGetComponent(out IAttacker attacker)) attacker.OnEraChanged(clampedEra);
+        if (TryGetComponent(out IBuilder builder)) builder.OnEraChanged(clampedEra);
     }
 
     /// <summary>
