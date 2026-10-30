@@ -189,6 +189,68 @@ public class Player
         }
     }
 
+    private readonly HashSet<TechSO> researchedTechs = new();
+    private readonly HashSet<TechSO> pendingTechs = new();
+
+    public event Action<TechSO> OnTechResearched;
+
+    public IReadOnlyCollection<TechSO> ResearchedTechs => researchedTechs;
+
+    public bool HasResearched(TechSO tech) => tech != null && researchedTechs.Contains(tech);
+    public bool IsResearchPending(TechSO tech) => tech != null && pendingTechs.Contains(tech);
+
+    public bool HasResourcesForTech(TechSO tech)
+    {
+        if (tech == null) return false;
+        if (tech.researchCosts == null || tech.researchCosts.Count == 0) return true;
+        if (tech.researchCosts.Count > resources.Count) return false;
+        foreach (ResourceType resource in tech.researchCosts.Keys)
+        {
+            if (!resources.ContainsKey(resource) || tech.researchCosts[resource] > resources[resource])
+                return false;
+        }
+
+        return true;
+    }
+
+    public bool TryBeginResearch(TechSO tech)
+    {
+        if (tech == null) return false;
+        if (HasResearched(tech) || IsResearchPending(tech)) return false;
+        if (CurrentEra < tech.requiredEra) return false;
+        if (!HasResourcesForTech(tech)) return false;
+
+        SpendTechCosts(tech);
+        pendingTechs.Add(tech);
+        return true;
+    }
+
+    public void ClearResearchPending(TechSO tech)
+    {
+        if (tech == null) return;
+        pendingTechs.Remove(tech);
+    }
+
+    public void CompleteResearch(TechSO tech)
+    {
+        if (tech == null) return;
+        pendingTechs.Remove(tech);
+        if (!researchedTechs.Add(tech)) return;
+        OnTechResearched?.Invoke(tech);
+    }
+
+    private void SpendTechCosts(TechSO tech)
+    {
+        if (tech.researchCosts == null || tech.researchCosts.Count == 0) return;
+        UseResources(tech.researchCosts);
+    }
+
+    public void RefundTechCosts(TechSO tech)
+    {
+        if (tech?.researchCosts == null || tech.researchCosts.Count == 0) return;
+        RefundResources(tech.researchCosts);
+    }
+
     private static int NonNegativeDelta(int amount) => amount < 0 ? 0 : amount;
 
     private void NotifyPopulationChangedIfNeeded(int previousUsed, int previousEffectiveMax)
