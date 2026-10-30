@@ -65,7 +65,7 @@ public class StanceComponent : BaseUnitComponent
     }
 
     /// <summary>
-    /// Changes the stance. Cancels stance-owned combat and, for Defensive/Hold, anchors at the current position.
+    /// Changes the stance. Cancels stance-owned combat and, for Defensive/Hold, anchors at group center when grouped.
     /// </summary>
     /// <param name="stance">New stance to apply.</param>
     public void SetStance(UnitStance stance)
@@ -78,7 +78,7 @@ public class StanceComponent : BaseUnitComponent
         returningToAnchor = false;
         pendingReturnAfterPlayerCombat = false;
         if (stance == UnitStance.Defensive || stance == UnitStance.HoldPosition)
-            SetAnchor(unit.transform.position);
+            SetAnchor(ResolvePreferredAnchor());
     }
 
     /// <summary>Sets the world position Defensive/Hold units guard and return to.</summary>
@@ -86,13 +86,27 @@ public class StanceComponent : BaseUnitComponent
     public void SetAnchor(Vector3 worldPosition) => Anchor = worldPosition;
 
     /// <summary>
-    /// Called when a move order finishes. Defensive/Hold units re-anchor at the destination.
+    /// Called when a move order finishes. Defensive/Hold units re-anchor at group center when grouped, else at destination.
     /// </summary>
     /// <param name="destination">Position the unit was moving to.</param>
     public void OnMoveCompleted(Vector3 destination)
     {
         if (CurrentStance == UnitStance.Defensive || CurrentStance == UnitStance.HoldPosition)
-            SetAnchor(destination);
+        {
+            if (FormationManager.Instance != null)
+            {
+                FormationGroup group = FormationManager.Instance.GetGroupForUnit(unit);
+                if (group != null)
+                {
+                    group.RefreshCenterFromMembers();
+                    SetAnchor(group.Center);
+                }
+                else
+                    SetAnchor(destination);
+            }
+            else
+                SetAnchor(destination);
+        }
         returningToAnchor = false;
     }
 
@@ -143,6 +157,7 @@ public class StanceComponent : BaseUnitComponent
     /// </summary>
     public void Evaluate()
     {
+        RefreshDefensiveAnchorFromGroupIfNeeded();
         if (attacker == null) return;
         float vision = GetVisionRadius();
         float attackRange = unit.GetInteractionRange();
@@ -307,8 +322,40 @@ public class StanceComponent : BaseUnitComponent
         if (attacker != null) attacker.StopAttacking();
         ClearStanceCombat();
         issuingStanceMove = true;
-        unit.MoveTo(Anchor);
+        Vector3 destination = Anchor;
+        if (FormationManager.Instance != null
+            && FormationManager.Instance.TryGetMemberSlot(unit, out Vector3 slot))
+        {
+            destination = slot;
+        }
+
+        unit.MoveTo(destination);
         issuingStanceMove = false;
         returningToAnchor = true;
+    }
+
+    private Vector3 ResolvePreferredAnchor()
+    {
+        if (FormationManager.Instance != null)
+        {
+            FormationGroup group = FormationManager.Instance.GetGroupForUnit(unit);
+            if (group != null)
+            {
+                group.RefreshCenterFromMembers();
+                return group.Center;
+            }
+        }
+        return unit.transform.position;
+    }
+
+    private void RefreshDefensiveAnchorFromGroupIfNeeded()
+    {
+        if (CurrentStance != UnitStance.Defensive && CurrentStance != UnitStance.HoldPosition)
+            return;
+        if (FormationManager.Instance == null) return;
+        FormationGroup group = FormationManager.Instance.GetGroupForUnit(unit);
+        if (group == null) return;
+        group.RefreshCenterFromMembers();
+        SetAnchor(group.Center);
     }
 }
