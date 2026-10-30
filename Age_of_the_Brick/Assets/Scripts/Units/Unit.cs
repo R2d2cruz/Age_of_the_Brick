@@ -551,6 +551,21 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
         ChangeToMoveState(destination);
     }
 
+    /// <summary>
+    /// Whether this unit is currently moving toward <paramref name="worldPoint"/> (XZ, within epsilon).
+    /// Uses the last issued move destination without exposing <see cref="NavMeshAgent"/>.
+    /// </summary>
+    public bool IsMovingToward(Vector3 worldPoint, float epsilon)
+    {
+        if (behaviourState != UnitBehaviourState.Moving)
+            return false;
+
+        float e = Mathf.Max(0f, epsilon);
+        float dx = lastMoveDestination.x - worldPoint.x;
+        float dz = lastMoveDestination.z - worldPoint.z;
+        return dx * dx + dz * dz <= e * e;
+    }
+
     private void NotifyMoveCompleted()
     {
         StanceComponent stance = GetComponent<StanceComponent>();
