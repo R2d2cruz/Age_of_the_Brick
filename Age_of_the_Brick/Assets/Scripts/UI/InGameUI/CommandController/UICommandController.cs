@@ -282,12 +282,6 @@ public class UICommandController : MonoBehaviour
 
         List<CommandAction> availableActions = primaryProvider.GetAvailableActions();
 
-        // Inject formation commands for military group selections.
-        if (currentSelection.Count > 1 && IsMilitarySelection())
-        {
-            InjectFormationActions(availableActions);
-        }
-
         // Assign actions to their designated grid slots.
         foreach (var action in availableActions)
         {
@@ -296,78 +290,6 @@ public class UICommandController : MonoBehaviour
                 gridButtons[action.gridIndex].Setup(action);
                 gridButtons[action.gridIndex].gameObject.SetActive(true);
             }
-        }
-    }
-
-    /// <summary>
-    /// Determines whether the current selection contains
-    /// military units eligible for formation commands.
-    /// </summary>
-    /// <returns>
-    /// True if at least one military unit is selected;
-    /// otherwise, false.
-    /// </returns>
-    private bool IsMilitarySelection()
-    {
-        /* foreach (var sel in currentSelection)
-        {
-            if (sel is MilitaryUnit)
-                return true;
-        } */
-
-        return false;
-    }
-
-    /// <summary>
-    /// Adds formation-related commands to the available action list.
-    /// Used for multi-selection control of military units.
-    /// </summary>
-    /// <param name="actions">
-    /// The list receiving the formation commands.
-    /// </param>
-    private void InjectFormationActions(List<CommandAction> actions)
-    {
-        actions.Add(new CommandAction
-        {
-            id = "fmt_line",
-            displayName = "Line Formation",
-            description = "Positions units in a front line formation.",
-            gridIndex = 8,
-            isInteractable = () => true,
-            actionCallback = () => SetGroupFormation(FormationType.Line)
-        });
-
-        actions.Add(new CommandAction
-        {
-            id = "fmt_box",
-            displayName = "Box Formation",
-            description = "Positions units in a compact defensive formation.",
-            gridIndex = 9,
-            isInteractable = () => true,
-            actionCallback = () => SetGroupFormation(FormationType.Box)
-        });
-    }
-
-    /// <summary>
-    /// Applies a formation order to all selected military units.
-    /// </summary>
-    /// <param name="formation">
-    /// The formation to apply.
-    /// </param>
-    private void SetGroupFormation(FormationType formation)
-    {
-        int localPlayerId = PlayerManager.Instance != null
-            ? PlayerManager.Instance.GetLocalPlayerId()
-            : 0;
-
-        foreach (var sel in currentSelection)
-        {
-            /*
-            if (sel.IsOwnedBy(localPlayerId) && sel is MilitaryUnit military)
-            {
-                military.SetFormation(formation);
-            }
-            */
         }
     }
 
@@ -391,31 +313,4 @@ public class UICommandController : MonoBehaviour
     /// Hides the command panel.
     /// </summary>
     private void HidePanel() => commandPanelContainer.SetActive(false);
-}
-
-/// <summary>
-/// Defines the available military formations that can be applied
-/// to a group of selected units.
-/// </summary>
-public enum FormationType
-{
-    /// <summary>
-    /// Units spread horizontally to maximize frontage.
-    /// </summary>
-    Line,
-
-    /// <summary>
-    /// Compact defensive formation.
-    /// </summary>
-    Box,
-
-    /// <summary>
-    /// Offensive wedge-shaped formation designed to break enemy lines.
-    /// </summary>
-    Wedge,
-
-    /// <summary>
-    /// Loose formation intended to reduce area damage and increase spacing.
-    /// </summary>
-    Scattered
 }
