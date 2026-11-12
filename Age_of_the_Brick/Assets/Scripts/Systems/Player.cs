@@ -213,11 +213,65 @@ public class Player
         return true;
     }
 
+    /// <summary>
+    /// Returns true when every non-null entry in <paramref name="tech"/>.requiredTechs
+    /// is researched. Empty list is met. Cycles are treated as unmet.
+    /// </summary>
+    public bool HasTechPrerequisitesMet(TechSO tech)
+    {
+        if (tech == null) return false;
+        if (tech.requiredTechs == null || tech.requiredTechs.Count == 0) return true;
+
+        if (HasRequiredTechCycle(tech))
+        {
+            Debug.LogWarning(
+                $"Tech '{tech.techName}' has a cycle in requiredTechs; treating prerequisites as unmet.");
+            return false;
+        }
+
+        foreach (TechSO prereq in tech.requiredTechs)
+        {
+            if (prereq == null) continue;
+            if (!HasResearched(prereq)) return false;
+        }
+
+        return true;
+    }
+
+    private static bool HasRequiredTechCycle(TechSO root)
+    {
+        var visiting = new HashSet<TechSO>();
+        var visited = new HashSet<TechSO>();
+
+        bool Dfs(TechSO node)
+        {
+            if (node == null) return false;
+            if (visited.Contains(node)) return false;
+            if (!visiting.Add(node)) return true;
+
+            if (node.requiredTechs != null)
+            {
+                foreach (TechSO next in node.requiredTechs)
+                {
+                    if (next == null) continue;
+                    if (Dfs(next)) return true;
+                }
+            }
+
+            visiting.Remove(node);
+            visited.Add(node);
+            return false;
+        }
+
+        return Dfs(root);
+    }
+
     public bool TryBeginResearch(TechSO tech)
     {
         if (tech == null) return false;
         if (HasResearched(tech) || IsResearchPending(tech)) return false;
         if (CurrentEra < tech.requiredEra) return false;
+        if (!HasTechPrerequisitesMet(tech)) return false;
         if (!HasResourcesForTech(tech)) return false;
 
         SpendTechCosts(tech);
