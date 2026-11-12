@@ -16,6 +16,7 @@ public class ResearchCommandSO : CommandSO
         Player owner = PlayerManager.Instance?.GetPlayer(context.ownerPlayerId);
         if (owner == null) return false;
         if (owner.HasResearched(techToResearch)) return false;
+        if (!owner.HasTechPrerequisitesMet(techToResearch)) return false;
         return true;
     }
 
