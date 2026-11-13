@@ -408,6 +408,29 @@ public class SelectionHandler : MonoBehaviour
     }
 
     /// <summary>
+    /// Replaces the current selection with the given selectables (local-owned filter optional at caller).
+    /// </summary>
+    /// <param name="newSelection">New selection list, or null to clear.</param>
+    public void SetSelection(List<Selectable> newSelection)
+    {
+        ClearSelection();
+        if (newSelection == null)
+        {
+            NotifySelectionChanged();
+            return;
+        }
+
+        for (int i = 0; i < newSelection.Count; i++)
+        {
+            Selectable s = newSelection[i];
+            if (s == null || s.state != SelectableState.Alive) continue;
+            AddToSelection(s);
+        }
+
+        NotifySelectionChanged();
+    }
+
+    /// <summary>
     /// Notifies all listeners that the current selection has changed.
     /// </summary>
     public void NotifySelectionChanged()

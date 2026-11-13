@@ -85,4 +85,28 @@ public class PlayerCameraController : MonoBehaviour
             transform.position = pos;
         }
     }
+
+    /// <summary>
+    /// Pans the camera rig on XZ so the ground point under the view center moves toward <paramref name="worldPoint"/>.
+    /// </summary>
+    public void FocusOnWorldPoint(Vector3 worldPoint)
+    {
+        Vector3 camPos = cam != null ? cam.transform.position : transform.position;
+        Vector3 delta = worldPoint - GetLookTargetApprox(camPos);
+        delta.y = 0f;
+        transform.position += delta;
+    }
+
+    private Vector3 GetLookTargetApprox(Vector3 camPos)
+    {
+        Plane ground = new Plane(Vector3.up, Vector3.zero);
+        Vector3 forward = cam != null ? cam.transform.forward : Vector3.down;
+        Ray ray = new Ray(camPos, forward);
+        if (ground.Raycast(ray, out float enter))
+            return ray.GetPoint(enter);
+
+        Vector3 p = camPos;
+        p.y = 0f;
+        return p;
+    }
 }

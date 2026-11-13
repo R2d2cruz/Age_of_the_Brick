@@ -1823,6 +1823,8 @@ GameObject:
   - component: {fileID: 529751892}
   - component: {fileID: 529751893}
   - component: {fileID: 529751894}
+  - component: {fileID: 529751896}
+  - component: {fileID: 529751897}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1954,6 +1956,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ec51ecabd5271b46ba68029f6de13a1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &529751896
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 529751888}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d06a86c11b5b656bbd40249e7bf63d1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &529751897
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 529751888}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8e7d6c5b4a39281706f5e4d3c2b1a09, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  doubleTapSeconds: 0.35
+  cameraController: {fileID: 684456156}
 --- !u!1 &540661124
 GameObject:
   m_ObjectHideFlags: 0

@@ -53,21 +53,40 @@ public class CommandHandler : MonoBehaviour
         Vector2 mousePos = Mouse.current.position.ReadValue();
         Ray ray = mainCamera.ScreenPointToRay(mousePos);
 
-        // 🔹 Click on a selectable object (enemy, resource, building, etc.)
+        // Click on a selectable object (enemy, resource, building, etc.)
         if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, targetMask))
         {
             Selectable target = hit.collider.GetComponentInParent<Selectable>();
             if (target != null)
             {
+                bool hostile = target.IsEnemyTo(activeLocalPlayerId);
+                if (hostile
+                    && FormationManager.Instance != null
+                    && FormationManager.Instance.TryGetSharedGroup(
+                        selectionHandler.SelectedObjects, out FormationGroup attackGroup))
+                {
+                    FormationManager.Instance.IssueFormationAttackApproach(
+                        attackGroup, target, selectionHandler.SelectedObjects);
+
+                    foreach (var obj in selectionHandler.SelectedObjects)
+                    {
+                        if (!obj.IsOwnedBy(activeLocalPlayerId)) continue;
+                        Unit unit = obj.GetComponent<Unit>();
+                        if (unit == null) continue;
+                        if (!FormationManager.IsFormationEligible(unit) || !attackGroup.Contains(unit))
+                            unit.ExecuteContextCommand(target);
+                    }
+
+                    return;
+                }
+
                 foreach (var obj in selectionHandler.SelectedObjects)
                 {
-                    if (obj.IsOwnedBy(activeLocalPlayerId)) // 🔹 only my units
+                    if (obj.IsOwnedBy(activeLocalPlayerId))
                     {
                         Unit unit = obj.GetComponent<Unit>();
                         if (unit != null)
-                        {
                             unit.ExecuteContextCommand(target);
-                        }
                     }
                 }
                 return;
@@ -78,15 +97,35 @@ public class CommandHandler : MonoBehaviour
         if (Physics.Raycast(ray, out RaycastHit groundHit, Mathf.Infinity, groundMask))
         {
             Vector3 destination = groundHit.point;
+
+            if (FormationManager.Instance != null
+                && FormationManager.Instance.TryGetSharedGroup(
+                    selectionHandler.SelectedObjects, out FormationGroup sharedGroup))
+            {
+                FormationManager.Instance.IssueFormationMove(
+                    sharedGroup, destination, selectionHandler.SelectedObjects);
+
+                foreach (var obj in selectionHandler.SelectedObjects)
+                {
+                    if (!obj.IsOwnedBy(activeLocalPlayerId)) continue;
+
+                    Unit unit = obj.GetComponent<Unit>();
+                    if (unit == null) continue;
+
+                    if (!FormationManager.IsFormationEligible(unit) || !sharedGroup.Contains(unit))
+                        unit.MoveTo(destination);
+                }
+
+                return;
+            }
+
             foreach (var obj in selectionHandler.SelectedObjects)
             {
                 if (obj.IsOwnedBy(activeLocalPlayerId)) // ✅ only my units
                 {
                     Unit unit = obj.GetComponent<Unit>();
                     if (unit != null)
-                    {
                         unit.MoveTo(destination);
-                    }
                 }
             }
         }

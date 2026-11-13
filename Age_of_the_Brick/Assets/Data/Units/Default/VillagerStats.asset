@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UnitStats
   unitName: Villager
   description: 
-  role: 4
+  role: 5
   unitSpace: 1
   creationCosts:
     entries:

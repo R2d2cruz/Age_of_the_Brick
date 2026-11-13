@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UnitStats
   unitName: Archer
   description: Test ranged skirmisher for projectile combat playtest.
-  role: 1
+  role: 2
   unitSpace: 1
   creationCosts:
     entries:

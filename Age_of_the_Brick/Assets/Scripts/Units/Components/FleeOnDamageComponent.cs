@@ -1,0 +1,274 @@
+using UnityEngine;
+using UnityEngine.AI;
+
+/// <summary>
+/// Makes the owning unit flee away from an enemy damage source, then idle under a short
+/// re-flee cooldown before resuming the prior gather/build/move task when still valid.
+/// Presence of this component on the prefab is the content gate (no <see cref="UnitRole"/> check).
+/// </summary>
+public class FleeOnDamageComponent : BaseUnitComponent
+{
+    private enum SnapshotKind
+    {
+        None,
+        Gather,
+        Build,
+        Move
+    }
+
+    [SerializeField]
+    [Tooltip("Flee distance when visionRange is missing or zero.")]
+    private float defaultFleeDistance = 10f;
+
+    [SerializeField]
+    [Tooltip("Seconds after arrive/timeout before resume and before a new flee may start.")]
+    private float reFleeCooldownSeconds = 2.5f;
+
+    [SerializeField]
+    [Tooltip("Extra seconds added to distance/speed for the flee move timeout.")]
+    private float fleeTimeoutMarginSeconds = 2f;
+
+    private bool issuingFleeMove;
+    private bool fleeing;
+    private bool pendingResume;
+    private bool ignorePlayerOrderNotify;
+    private float cooldownRemaining;
+    private float fleeTimeoutRemaining;
+
+    private SnapshotKind snapshotKind;
+    private Resource snapshotResource;
+    private Building snapshotBuilding;
+    private Vector3 snapshotMoveDestination;
+
+    /// <summary>True while this component is issuing its own flee <see cref="Unit.MoveTo"/>.</summary>
+    public bool IsIssuingFleeMove => issuingFleeMove;
+
+    private void Update()
+    {
+        if (unit == null || unit.state != SelectableState.Alive)
+            return;
+
+        if (fleeing)
+        {
+            fleeTimeoutRemaining -= Time.deltaTime;
+            if (fleeTimeoutRemaining <= 0f
+                || unit.BehaviourState == UnitBehaviourState.Idle)
+            {
+                BeginCooldownPhase();
+            }
+        }
+
+        if (cooldownRemaining > 0f)
+        {
+            cooldownRemaining -= Time.deltaTime;
+            if (cooldownRemaining <= 0f)
+            {
+                cooldownRemaining = 0f;
+                if (pendingResume)
+                {
+                    pendingResume = false;
+                    ResumePriorTask();
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Called from <see cref="Unit.TakeDamage"/> when an enemy source damaged this unit.
+    /// </summary>
+    /// <param name="source">Enemy that dealt the damage.</param>
+    public void OnDamaged(Selectable source)
+    {
+        if (unit == null || unit.state != SelectableState.Alive)
+            return;
+        if (source == null || source.state != SelectableState.Alive)
+            return;
+        if (!source.IsEnemyTo(unit.ownerPlayerId))
+            return;
+        if (fleeing || cooldownRemaining > 0f || pendingResume)
+            return;
+        if (unit.TryGetComponent(out IAttacker attacker) && attacker.IsInCombat)
+            return;
+
+        SnapshotPriorTask();
+        StartFleeMove(source.transform.position);
+    }
+
+    /// <summary>
+    /// Cancels flee and clears any resume snapshot. Called when a player order takes over.
+    /// </summary>
+    public void NotifyPlayerOrder()
+    {
+        if (ignorePlayerOrderNotify)
+            return;
+
+        fleeing = false;
+        pendingResume = false;
+        cooldownRemaining = 0f;
+        fleeTimeoutRemaining = 0f;
+        ClearSnapshot();
+    }
+
+    /// <summary>
+    /// Called when a move order finishes. Completes an in-progress flee move.
+    /// </summary>
+    /// <param name="destination">Position the unit was moving to.</param>
+    public void OnMoveCompleted(Vector3 destination)
+    {
+        if (!fleeing)
+            return;
+        BeginCooldownPhase();
+    }
+
+    private void StartFleeMove(Vector3 threatPosition)
+    {
+        float distance = ResolveFleeDistance();
+        Vector3 fleePoint = FleeDestination.ComputeAwayPoint(
+            unit.transform.position,
+            threatPosition,
+            distance,
+            unit.transform.forward);
+        fleePoint = SampleFleePointOnNavMesh(fleePoint, distance);
+
+        fleeing = true;
+        pendingResume = false;
+        cooldownRemaining = 0f;
+
+        float speed = unit.currentStats != null ? Mathf.Max(0.01f, unit.currentStats.moveSpeed) : 1f;
+        float travel = Vector3.Distance(
+            new Vector3(unit.transform.position.x, 0f, unit.transform.position.z),
+            new Vector3(fleePoint.x, 0f, fleePoint.z));
+        fleeTimeoutRemaining = travel / speed + Mathf.Max(0f, fleeTimeoutMarginSeconds);
+
+        // Gather Extracting leaves a completed path (remainingDistance ≈ 0). Clear it so
+        // MovingState does not treat the flee MoveTo as already arrived.
+        if (unit.TryGetComponent(out NavMeshAgent agent))
+        {
+            agent.ResetPath();
+            agent.isStopped = false;
+        }
+
+        issuingFleeMove = true;
+        unit.MoveTo(fleePoint);
+        issuingFleeMove = false;
+    }
+
+    private float ResolveFleeDistance()
+    {
+        if (unit.currentStats != null && unit.currentStats.visionRange > 0f)
+            return unit.currentStats.visionRange;
+        return Mathf.Max(0f, defaultFleeDistance);
+    }
+
+    private Vector3 SampleFleePointOnNavMesh(Vector3 desired, float sampleRadius)
+    {
+        float radius = Mathf.Max(sampleRadius, defaultFleeDistance);
+        if (NavMesh.SamplePosition(desired, out NavMeshHit hit, radius, NavMesh.AllAreas))
+            return hit.position;
+
+        Vector3 away = desired - unit.transform.position;
+        away.y = 0f;
+        if (away.sqrMagnitude < 1e-6f)
+            away = unit.transform.forward;
+        away.Normalize();
+        Vector3 shortDesired = unit.transform.position + away * Mathf.Max(0.1f, defaultFleeDistance);
+
+        if (NavMesh.SamplePosition(shortDesired, out NavMeshHit shortHit, Mathf.Max(defaultFleeDistance, 4f), NavMesh.AllAreas))
+            return shortHit.position;
+
+        return desired;
+    }
+
+    private void BeginCooldownPhase()
+    {
+        if (!fleeing)
+            return;
+
+        fleeing = false;
+        fleeTimeoutRemaining = 0f;
+        pendingResume = true;
+        cooldownRemaining = Mathf.Max(0f, reFleeCooldownSeconds);
+        unit.Wait();
+    }
+
+    private void SnapshotPriorTask()
+    {
+        ClearSnapshot();
+
+        // Only snapshot the job the unit is performing right now. TargetResource/TargetBuilding
+        // linger after switching tasks (e.g. gather then build), so field presence is not enough.
+        if (unit.TryGetComponent(out BuilderComponent builder)
+            && builder.IsBuilding
+            && builder.TargetBuilding != null
+            && !builder.TargetBuilding.IsFullyBuilt)
+        {
+            snapshotKind = SnapshotKind.Build;
+            snapshotBuilding = builder.TargetBuilding;
+            return;
+        }
+
+        if (unit.TryGetComponent(out GathererComponent gatherer)
+            && gatherer.IsGathering
+            && gatherer.TargetResource != null
+            && gatherer.TargetResource.GetQuantity() > 0)
+        {
+            snapshotKind = SnapshotKind.Gather;
+            snapshotResource = gatherer.TargetResource;
+            return;
+        }
+
+        if (unit.BehaviourState == UnitBehaviourState.Moving)
+        {
+            snapshotKind = SnapshotKind.Move;
+            snapshotMoveDestination = unit.LastMoveDestination;
+        }
+    }
+
+    private void ResumePriorTask()
+    {
+        SnapshotKind kind = snapshotKind;
+        Resource resource = snapshotResource;
+        Building building = snapshotBuilding;
+        Vector3 moveDestination = snapshotMoveDestination;
+        ClearSnapshot();
+
+        ignorePlayerOrderNotify = true;
+        try
+        {
+            switch (kind)
+            {
+                case SnapshotKind.Gather:
+                    if (resource != null && resource.GetQuantity() > 0
+                        && unit.TryGetComponent(out GathererComponent gatherer))
+                    {
+                        gatherer.StartGathering(resource);
+                    }
+                    break;
+
+                case SnapshotKind.Build:
+                    if (building != null && !building.IsFullyBuilt
+                        && unit.TryGetComponent(out BuilderComponent builder))
+                    {
+                        builder.StartBuilding(building);
+                    }
+                    break;
+
+                case SnapshotKind.Move:
+                    unit.MoveTo(moveDestination);
+                    break;
+            }
+        }
+        finally
+        {
+            ignorePlayerOrderNotify = false;
+        }
+    }
+
+    private void ClearSnapshot()
+    {
+        snapshotKind = SnapshotKind.None;
+        snapshotResource = null;
+        snapshotBuilding = null;
+        snapshotMoveDestination = Vector3.zero;
+    }
+}

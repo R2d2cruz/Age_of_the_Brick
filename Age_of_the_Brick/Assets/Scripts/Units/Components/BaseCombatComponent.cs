@@ -16,6 +16,10 @@ public class BaseCombatComponent : BaseUnitComponent, IAttacker
     /// </summary>
     protected Selectable currentTarget;   // Generic target (resource/building/unit)
 
+    /// <inheritdoc />
+    public bool IsInCombat =>
+        currentTarget != null && currentTarget.state == SelectableState.Alive;
+
     /// <summary>
     /// State responsible for combat behavior.
     /// </summary>
@@ -56,6 +60,7 @@ public class BaseCombatComponent : BaseUnitComponent, IAttacker
         }
         // Keep stance ownership only for the stance's own target; otherwise the player took over.
         unit.GetComponent<StanceComponent>()?.AcknowledgeAttack(target);
+        unit.GetComponent<FleeOnDamageComponent>()?.NotifyPlayerOrder();
 
         currentTarget = target;
         unit.ChangeState(attackState);

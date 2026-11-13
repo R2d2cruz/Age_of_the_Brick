@@ -1,0 +1,131 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ba6f4db6bc9c5845b67cec844bd873f, type: 3}
+  m_Name: CavalryStats
+  m_EditorClassIdentifier: Assembly-CSharp::UnitStats
+  unitName: Cavalry
+  description: Test cavalry skirmisher for projectile combat playtest.
+  role: 1
+  unitSpace: 1
+  creationCosts:
+    entries:
+    - Key: 0
+      Value: 60
+    - Key: 1
+      Value: 30
+  trainingTime: 15
+  statsPerEra:
+  - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
+    health: 40
+    lightDefense: 0
+    heavyDefense: 0
+    visionRange: 24
+    moveSpeed: 2.8
+    range: 10
+    attackSpeed: 1.2
+    lightAttack: 6
+    heavyAttack: 0
+    buildingMultiplier: 1
+    projectileTrackTime: 0.35
+    projectileSpeed: 18
+    healSpeed: 0
+    buildSpeed: 0
+    buildHealth: 0
+    gatherSpeed: 0
+  - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
+    health: 45
+    lightDefense: 0
+    heavyDefense: 0
+    visionRange: 24
+    moveSpeed: 2.8
+    range: 11
+    attackSpeed: 1.25
+    lightAttack: 7
+    heavyAttack: 0
+    buildingMultiplier: 1
+    projectileTrackTime: 0.35
+    projectileSpeed: 19
+    healSpeed: 0
+    buildSpeed: 0
+    buildHealth: 0
+    gatherSpeed: 0
+  - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
+    health: 50
+    lightDefense: 1
+    heavyDefense: 0
+    visionRange: 26
+    moveSpeed: 2.9
+    range: 12
+    attackSpeed: 1.3
+    lightAttack: 8
+    heavyAttack: 0
+    buildingMultiplier: 1
+    projectileTrackTime: 0.4
+    projectileSpeed: 20
+    healSpeed: 0
+    buildSpeed: 0
+    buildHealth: 0
+    gatherSpeed: 0
+  - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
+    health: 55
+    lightDefense: 1
+    heavyDefense: 0
+    visionRange: 26
+    moveSpeed: 2.9
+    range: 13
+    attackSpeed: 1.35
+    lightAttack: 9
+    heavyAttack: 0
+    buildingMultiplier: 1
+    projectileTrackTime: 0.4
+    projectileSpeed: 21
+    healSpeed: 0
+    buildSpeed: 0
+    buildHealth: 0
+    gatherSpeed: 0
+  - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
+    health: 60
+    lightDefense: 1
+    heavyDefense: 1
+    visionRange: 28
+    moveSpeed: 3
+    range: 14
+    attackSpeed: 1.4
+    lightAttack: 10
+    heavyAttack: 0
+    buildingMultiplier: 1
+    projectileTrackTime: 0.45
+    projectileSpeed: 22
+    healSpeed: 0
+    buildSpeed: 0
+    buildHealth: 0
+    gatherSpeed: 0
+  - image: {fileID: 21300000, guid: 471a9554be5c41f4788211591d00fcf2, type: 3}
+    health: 65
+    lightDefense: 2
+    heavyDefense: 1
+    visionRange: 28
+    moveSpeed: 3
+    range: 15
+    attackSpeed: 1.45
+    lightAttack: 11
+    heavyAttack: 0
+    buildingMultiplier: 1
+    projectileTrackTime: 0.45
+    projectileSpeed: 23
+    healSpeed: 0
+    buildSpeed: 0
+    buildHealth: 0
+    gatherSpeed: 0
+  hasVisualEvolution: 0
+  prefabsPerEra:
+  - {fileID: 614954035464767975, guid: 14707a330c629e448ac389ed762167b9, type: 3}

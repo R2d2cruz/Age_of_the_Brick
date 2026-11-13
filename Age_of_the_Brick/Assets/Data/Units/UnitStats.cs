@@ -7,12 +7,12 @@ using UnityEngine.Rendering;
 /// </summary>
 public enum UnitRole
 {
-    Frontline,
-    Skirmisher,
-    Healer,
+    Infantry,
+    Cavalry,
+    Ranged,
     Siege,
-    Worker,
-    Hero
+    Support,
+    Worker
 }
 
 /// <summary>
@@ -51,7 +51,7 @@ public class UnitStats : ScriptableObject
     /// Strategic role used to categorize the unit for gameplay,
     /// UI presentation, and AI decision-making.
     /// </summary>
-    [Tooltip("Strategic role of the unit (e.g., Frontline, Siege, Healer).")]
+    [Tooltip("Strategic role of the unit (e.g., Infantry, Cavalry, Ranged).")]
     public UnitRole role;
 
     /// <summary>
