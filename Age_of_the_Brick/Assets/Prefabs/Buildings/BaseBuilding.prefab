@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 9018833985902589926}
   - component: {fileID: 7457889372474930941}
   - component: {fileID: 985051395327030171}
+  - component: {fileID: 7499550420912353058}
   m_Layer: 3
   m_Name: BaseBuilding
   m_TagString: Building
@@ -89,6 +90,25 @@ MonoBehaviour:
   ProducerComponent: {fileID: 0}
   ConstructionComponent: {fileID: 0}
   mainCommands: []
+  constructionCommands: []
+  meshes: []
+  finalMesh: {fileID: 0}
+--- !u!208 &7499550420912353058
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1841447183763410574}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 6.4, y: 2, z: 6.4}
+  m_MoveThreshold: 0.1
+  m_Carve: 1
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0, y: 2, z: 0}
+  m_TimeToStationary: 0.5
 --- !u!1 &2202854350939467797
 GameObject:
   m_ObjectHideFlags: 0
