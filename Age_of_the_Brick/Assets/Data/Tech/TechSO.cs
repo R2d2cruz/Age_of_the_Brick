@@ -27,4 +27,8 @@ public class TechSO : ScriptableObject
     [Header("Flat modifiers")]
     public UnitStatModifiers unitModifiers = new();
     public BuildingStatModifiers buildingModifiers = new();
+
+    [Header("Multipliers (1 = no change)")]
+    public UnitStatMultipliers unitMultipliers = new();
+    public BuildingStatMultipliers buildingMultipliers = new();
 }

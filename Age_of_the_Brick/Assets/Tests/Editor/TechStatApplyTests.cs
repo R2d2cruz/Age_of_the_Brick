@@ -43,4 +43,48 @@ public class TechStatApplyTests
         copy.lightAttack = 99;
         Assert.AreEqual(3, source.lightAttack);
     }
+
+    [Test]
+    public void ApplyUnitMultipliers_MultipliesAfterFlatSemantics_FloorsInts()
+    {
+        var stats = new EraStats { lightAttack = 12, gatherSpeed = 10f };
+        var mults = new UnitStatMultipliers { lightAttack = 1.1f, gatherSpeed = 1.1f };
+        TechStatApply.ApplyUnitMultipliers(stats, mults);
+        Assert.AreEqual(13, stats.lightAttack);
+        Assert.AreEqual(11f, stats.gatherSpeed, 0.0001f);
+    }
+
+    [Test]
+    public void ApplyUnitMultipliers_StacksMultiplicatively()
+    {
+        var stats = new EraStats { gatherSpeed = 10f };
+        TechStatApply.ApplyUnitMultipliers(stats, new UnitStatMultipliers { gatherSpeed = 1.1f });
+        TechStatApply.ApplyUnitMultipliers(stats, new UnitStatMultipliers { gatherSpeed = 1.2f });
+        Assert.AreEqual(13.2f, stats.gatherSpeed, 0.0001f);
+    }
+
+    [Test]
+    public void ApplyUnitMultipliers_IdentityDoesNotChange()
+    {
+        var stats = new EraStats { lightAttack = 7, gatherSpeed = 3f };
+        TechStatApply.ApplyUnitMultipliers(stats, new UnitStatMultipliers());
+        Assert.AreEqual(7, stats.lightAttack);
+        Assert.AreEqual(3f, stats.gatherSpeed, 0.0001f);
+    }
+
+    [Test]
+    public void ApplyUnitMultipliers_ClampsNegativeResultToZero()
+    {
+        var stats = new EraStats { lightAttack = 5 };
+        TechStatApply.ApplyUnitMultipliers(stats, new UnitStatMultipliers { lightAttack = -2f });
+        Assert.AreEqual(0, stats.lightAttack);
+    }
+
+    [Test]
+    public void ApplyBuildingMultipliers_FloorsHealth()
+    {
+        var stats = new EraStatsBuilding { health = 100 };
+        TechStatApply.ApplyBuildingMultipliers(stats, new BuildingStatMultipliers { health = 1.15f });
+        Assert.AreEqual(115, stats.health);
+    }
 }
