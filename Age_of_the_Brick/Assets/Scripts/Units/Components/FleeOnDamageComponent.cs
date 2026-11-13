@@ -128,17 +128,20 @@ public class FleeOnDamageComponent : BaseUnitComponent
             threatPosition,
             distance,
             unit.transform.forward);
+        fleePoint = SampleFleePointOnNavMesh(fleePoint, distance);
 
         fleeing = true;
         pendingResume = false;
         cooldownRemaining = 0f;
 
         float speed = unit.currentStats != null ? Mathf.Max(0.01f, unit.currentStats.moveSpeed) : 1f;
-        fleeTimeoutRemaining = distance / speed + Mathf.Max(0f, fleeTimeoutMarginSeconds);
+        float travel = Vector3.Distance(
+            new Vector3(unit.transform.position.x, 0f, unit.transform.position.z),
+            new Vector3(fleePoint.x, 0f, fleePoint.z));
+        fleeTimeoutRemaining = travel / speed + Mathf.Max(0f, fleeTimeoutMarginSeconds);
 
-        // Gather Extracting leaves a completed path (remainingDistance ≈ 0). Without clearing it,
-        // MovingState treats the flee MoveTo as already arrived. Build Constructing usually still
-        // has remainingDistance toward the building center, so flee worked there without this.
+        // Gather Extracting leaves a completed path (remainingDistance ≈ 0). Clear it so
+        // MovingState does not treat the flee MoveTo as already arrived.
         if (unit.TryGetComponent(out NavMeshAgent agent))
         {
             agent.ResetPath();
@@ -157,6 +160,25 @@ public class FleeOnDamageComponent : BaseUnitComponent
         return Mathf.Max(0f, defaultFleeDistance);
     }
 
+    private Vector3 SampleFleePointOnNavMesh(Vector3 desired, float sampleRadius)
+    {
+        float radius = Mathf.Max(sampleRadius, defaultFleeDistance);
+        if (NavMesh.SamplePosition(desired, out NavMeshHit hit, radius, NavMesh.AllAreas))
+            return hit.position;
+
+        Vector3 away = desired - unit.transform.position;
+        away.y = 0f;
+        if (away.sqrMagnitude < 1e-6f)
+            away = unit.transform.forward;
+        away.Normalize();
+        Vector3 shortDesired = unit.transform.position + away * Mathf.Max(0.1f, defaultFleeDistance);
+
+        if (NavMesh.SamplePosition(shortDesired, out NavMeshHit shortHit, Mathf.Max(defaultFleeDistance, 4f), NavMesh.AllAreas))
+            return shortHit.position;
+
+        return desired;
+    }
+
     private void BeginCooldownPhase()
     {
         if (!fleeing)
@@ -173,21 +195,25 @@ public class FleeOnDamageComponent : BaseUnitComponent
     {
         ClearSnapshot();
 
-        if (unit.TryGetComponent(out GathererComponent gatherer)
-            && gatherer.TargetResource != null
-            && gatherer.TargetResource.GetQuantity() > 0)
-        {
-            snapshotKind = SnapshotKind.Gather;
-            snapshotResource = gatherer.TargetResource;
-            return;
-        }
-
+        // Only snapshot the job the unit is performing right now. TargetResource/TargetBuilding
+        // linger after switching tasks (e.g. gather then build), so field presence is not enough.
         if (unit.TryGetComponent(out BuilderComponent builder)
+            && builder.IsBuilding
             && builder.TargetBuilding != null
             && !builder.TargetBuilding.IsFullyBuilt)
         {
             snapshotKind = SnapshotKind.Build;
             snapshotBuilding = builder.TargetBuilding;
+            return;
+        }
+
+        if (unit.TryGetComponent(out GathererComponent gatherer)
+            && gatherer.IsGathering
+            && gatherer.TargetResource != null
+            && gatherer.TargetResource.GetQuantity() > 0)
+        {
+            snapshotKind = SnapshotKind.Gather;
+            snapshotResource = gatherer.TargetResource;
             return;
         }
 

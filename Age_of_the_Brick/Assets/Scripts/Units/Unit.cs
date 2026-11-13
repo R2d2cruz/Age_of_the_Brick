@@ -482,6 +482,12 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
         }
     }
 
+    /// <summary>
+    /// Whether <paramref name="state"/> is the unit's active state instance.
+    /// </summary>
+    public bool IsInState(UnitState state) =>
+        state != null && ReferenceEquals(currentState, state);
+
     // ============================================================
     // HEALTH UI
     // ============================================================
@@ -716,6 +722,15 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
             if (unit.agent == null) return;
 
             if (unit.agent.pathPending)
+            {
+                unit.PlayWalkAnimation();
+                return;
+            }
+
+            // After ResetPath / fresh SetDestination, hasPath may be false for a frame while
+            // remainingDistance is still 0 from a prior completed gather path. Wait for a path
+            // instead of treating that as arrival (which aborted flee during Extracting).
+            if (!unit.agent.hasPath)
             {
                 unit.PlayWalkAnimation();
                 return;

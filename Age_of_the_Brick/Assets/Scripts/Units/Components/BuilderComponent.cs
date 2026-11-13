@@ -15,6 +15,11 @@ public class BuilderComponent : BaseUnitComponent, IBuilder
     public Building TargetBuilding { get; private set; }
 
     /// <summary>
+    /// True while this unit's active state is the build state (not merely a leftover target).
+    /// </summary>
+    public bool IsBuilding => unit != null && unit.IsInState(buildState);
+
+    /// <summary>
     /// Initializes the builder component and creates
     /// the state responsible for construction logic.
     /// </summary>

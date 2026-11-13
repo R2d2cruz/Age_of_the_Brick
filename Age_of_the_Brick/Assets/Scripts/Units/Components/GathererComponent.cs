@@ -43,6 +43,11 @@ public class GathererComponent : BaseUnitComponent, IGatherer
     public Resource TargetResource => targetResource;
 
     /// <summary>
+    /// True while this unit's active state is the gather state (not merely a leftover target).
+    /// </summary>
+    public bool IsGathering => unit != null && unit.IsInState(gatherState);
+
+    /// <summary>
     /// Last known position of the active resource node.
     /// Used for relocation searches when the resource is depleted.
     /// </summary>
