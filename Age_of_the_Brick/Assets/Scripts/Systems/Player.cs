@@ -189,6 +189,122 @@ public class Player
         }
     }
 
+    private readonly HashSet<TechSO> researchedTechs = new();
+    private readonly HashSet<TechSO> pendingTechs = new();
+
+    public event Action<TechSO> OnTechResearched;
+
+    public IReadOnlyCollection<TechSO> ResearchedTechs => researchedTechs;
+
+    public bool HasResearched(TechSO tech) => tech != null && researchedTechs.Contains(tech);
+    public bool IsResearchPending(TechSO tech) => tech != null && pendingTechs.Contains(tech);
+
+    public bool HasResourcesForTech(TechSO tech)
+    {
+        if (tech == null) return false;
+        if (tech.researchCosts == null || tech.researchCosts.Count == 0) return true;
+        if (tech.researchCosts.Count > resources.Count) return false;
+        foreach (ResourceType resource in tech.researchCosts.Keys)
+        {
+            if (!resources.ContainsKey(resource) || tech.researchCosts[resource] > resources[resource])
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Returns true when every non-null entry in <paramref name="tech"/>.requiredTechs
+    /// is researched. Empty list is met. Cycles are treated as unmet.
+    /// </summary>
+    public bool HasTechPrerequisitesMet(TechSO tech)
+    {
+        if (tech == null) return false;
+        if (tech.requiredTechs == null || tech.requiredTechs.Count == 0) return true;
+
+        if (HasRequiredTechCycle(tech))
+        {
+            Debug.LogWarning(
+                $"Tech '{tech.techName}' has a cycle in requiredTechs; treating prerequisites as unmet.");
+            return false;
+        }
+
+        foreach (TechSO prereq in tech.requiredTechs)
+        {
+            if (prereq == null) continue;
+            if (!HasResearched(prereq)) return false;
+        }
+
+        return true;
+    }
+
+    private static bool HasRequiredTechCycle(TechSO root)
+    {
+        var visiting = new HashSet<TechSO>();
+        var visited = new HashSet<TechSO>();
+
+        bool Dfs(TechSO node)
+        {
+            if (node == null) return false;
+            if (visited.Contains(node)) return false;
+            if (!visiting.Add(node)) return true;
+
+            if (node.requiredTechs != null)
+            {
+                foreach (TechSO next in node.requiredTechs)
+                {
+                    if (next == null) continue;
+                    if (Dfs(next)) return true;
+                }
+            }
+
+            visiting.Remove(node);
+            visited.Add(node);
+            return false;
+        }
+
+        return Dfs(root);
+    }
+
+    public bool TryBeginResearch(TechSO tech)
+    {
+        if (tech == null) return false;
+        if (HasResearched(tech) || IsResearchPending(tech)) return false;
+        if (CurrentEra < tech.requiredEra) return false;
+        if (!HasTechPrerequisitesMet(tech)) return false;
+        if (!HasResourcesForTech(tech)) return false;
+
+        SpendTechCosts(tech);
+        pendingTechs.Add(tech);
+        return true;
+    }
+
+    public void ClearResearchPending(TechSO tech)
+    {
+        if (tech == null) return;
+        pendingTechs.Remove(tech);
+    }
+
+    public void CompleteResearch(TechSO tech)
+    {
+        if (tech == null) return;
+        pendingTechs.Remove(tech);
+        if (!researchedTechs.Add(tech)) return;
+        OnTechResearched?.Invoke(tech);
+    }
+
+    private void SpendTechCosts(TechSO tech)
+    {
+        if (tech.researchCosts == null || tech.researchCosts.Count == 0) return;
+        UseResources(tech.researchCosts);
+    }
+
+    public void RefundTechCosts(TechSO tech)
+    {
+        if (tech?.researchCosts == null || tech.researchCosts.Count == 0) return;
+        RefundResources(tech.researchCosts);
+    }
+
     private static int NonNegativeDelta(int amount) => amount < 0 ? 0 : amount;
 
     private void NotifyPopulationChangedIfNeeded(int previousUsed, int previousEffectiveMax)

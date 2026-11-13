@@ -67,4 +67,10 @@ public class ProductionQueueComponent : MonoBehaviour
             OnQueueChanged?.Invoke();
         }
     }
+
+    private void OnDestroy()
+    {
+        for (int i = productionQueue.Count - 1; i >= 0; i--)
+            CancelTask(i);
+    }
 }

@@ -94,6 +94,26 @@ public class SerializableDictionary<TKey, TValue> :
     }
 
     /// <summary>
+    /// Sets or overwrites a runtime entry and mirrors it into the serialized list.
+    /// </summary>
+    public void Set(TKey key, TValue value)
+    {
+        RuntimeDictionary[key] = value;
+        for (int i = 0; i < entries.Count; i++)
+        {
+            if (EqualityComparer<TKey>.Default.Equals(entries[i].Key, key))
+            {
+                var pair = entries[i];
+                pair.Value = value;
+                entries[i] = pair;
+                return;
+            }
+        }
+
+        entries.Add(new SerializableKeyValuePair<TKey, TValue> { Key = key, Value = value });
+    }
+
+    /// <summary>
     /// Returns a dictionary enumerator.
     /// </summary>
     public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
