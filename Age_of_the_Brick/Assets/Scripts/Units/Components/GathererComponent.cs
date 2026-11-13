@@ -112,6 +112,8 @@ public class GathererComponent : BaseUnitComponent, IGatherer
     {
         if (resource == null || resource.GetQuantity() <= 0) return;
 
+        unit.GetComponent<FleeOnDamageComponent>()?.NotifyPlayerOrder();
+
         targetResource = resource;
         currentResourceType = resource.Type;
         lastResourcePosition = resource.GetPosition();

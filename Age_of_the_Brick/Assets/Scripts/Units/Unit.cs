@@ -25,6 +25,9 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     private Vector3 lastMoveDestination;
     private Renderer rend;                  // Main model renderer.
 
+    /// <summary>Last destination issued via <see cref="MoveTo"/>.</summary>
+    public Vector3 LastMoveDestination => lastMoveDestination;
+
     /// <summary>
     /// Current health value of the unit at runtime.
     /// </summary>
@@ -135,6 +138,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     /// </summary>
     public virtual void Stop()
     {
+        GetComponent<FleeOnDamageComponent>()?.NotifyPlayerOrder();
         ChangeState(idleState);
     }
 
@@ -541,6 +545,11 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
         if (stance != null && !stance.IsIssuingStanceMove)
             stance.NotifyPlayerOrder();
 
+        // Same for flee: player/system moves cancel flee; flee-issued MoveTo does not.
+        FleeOnDamageComponent flee = GetComponent<FleeOnDamageComponent>();
+        if (flee != null && !flee.IsIssuingFleeMove)
+            flee.NotifyPlayerOrder();
+
         lastMoveDestination = destination;
         if (agent != null)
         {
@@ -570,6 +579,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     {
         StanceComponent stance = GetComponent<StanceComponent>();
         stance?.OnMoveCompleted(lastMoveDestination);
+        GetComponent<FleeOnDamageComponent>()?.OnMoveCompleted(lastMoveDestination);
     }
 
 
@@ -597,7 +607,11 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
         currentHealth -= finalDamage;
 
         if (source != null && source.IsEnemyTo(ownerPlayerId))
+        {
             BroadcastAssist(source);
+            if (currentHealth > 0f)
+                GetComponent<FleeOnDamageComponent>()?.OnDamaged(source);
+        }
 
         if (currentHealth <= 0f && state == SelectableState.Alive)
         {

@@ -52,6 +52,8 @@ public class BuilderComponent : BaseUnitComponent, IBuilder
     {
         if (building == null || building.IsFullyBuilt) return;
 
+        unit.GetComponent<FleeOnDamageComponent>()?.NotifyPlayerOrder();
+
         TargetBuilding = building;
         unit.ChangeState(buildState);
     }
