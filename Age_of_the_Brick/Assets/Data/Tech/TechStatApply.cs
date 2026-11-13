@@ -6,6 +6,8 @@ using UnityEngine;
 /// </summary>
 public static class TechStatApply
 {
+    private static bool s_loggedZeroMultiplierFactor;
+
     public static bool MatchesUnit(TechSO tech, UnitStats unitStats)
     {
         if (tech == null || unitStats == null) return false;
@@ -99,5 +101,84 @@ public static class TechStatApply
         target.attackRange += mods.attackRange;
         target.lightAttack += mods.lightAttack;
         target.heavyAttack += mods.heavyAttack;
+    }
+
+    /// <summary>
+    /// Multiplies numeric fields on <paramref name="target"/> by per-field factors.
+    /// Identity factors (~1) are skipped. Legacy unset factors (~0) are treated as identity.
+    /// Int fields are floored; results are clamped to non-negative values.
+    /// </summary>
+    public static void ApplyUnitMultipliers(EraStats target, UnitStatMultipliers mults)
+    {
+        if (target == null || mults == null) return;
+        target.health = ScaleInt(target.health, mults.health);
+        target.lightDefense = ScaleInt(target.lightDefense, mults.lightDefense);
+        target.heavyDefense = ScaleInt(target.heavyDefense, mults.heavyDefense);
+        target.visionRange = ScaleInt(target.visionRange, mults.visionRange);
+        target.moveSpeed = ScaleFloat(target.moveSpeed, mults.moveSpeed);
+        target.range = ScaleFloat(target.range, mults.range);
+        target.attackSpeed = ScaleFloat(target.attackSpeed, mults.attackSpeed);
+        target.lightAttack = ScaleInt(target.lightAttack, mults.lightAttack);
+        target.heavyAttack = ScaleInt(target.heavyAttack, mults.heavyAttack);
+        target.buildingMultiplier = ScaleInt(target.buildingMultiplier, mults.buildingMultiplier);
+        target.projectileTrackTime = ScaleFloat(target.projectileTrackTime, mults.projectileTrackTime);
+        target.projectileSpeed = ScaleFloat(target.projectileSpeed, mults.projectileSpeed);
+        target.healSpeed = ScaleFloat(target.healSpeed, mults.healSpeed);
+        target.buildSpeed = ScaleFloat(target.buildSpeed, mults.buildSpeed);
+        target.buildHealth = ScaleFloat(target.buildHealth, mults.buildHealth);
+        target.gatherSpeed = ScaleFloat(target.gatherSpeed, mults.gatherSpeed);
+    }
+
+    /// <summary>
+    /// Multiplies numeric fields on <paramref name="target"/> by per-field factors.
+    /// Identity factors (~1) are skipped. Legacy unset factors (~0) are treated as identity.
+    /// Int fields are floored; results are clamped to non-negative values.
+    /// </summary>
+    public static void ApplyBuildingMultipliers(EraStatsBuilding target, BuildingStatMultipliers mults)
+    {
+        if (target == null || mults == null) return;
+        target.health = ScaleInt(target.health, mults.health);
+        target.lightDefense = ScaleInt(target.lightDefense, mults.lightDefense);
+        target.heavyDefense = ScaleInt(target.heavyDefense, mults.heavyDefense);
+        target.visionRange = ScaleInt(target.visionRange, mults.visionRange);
+        target.garrisonCapacity = ScaleInt(target.garrisonCapacity, mults.garrisonCapacity);
+        target.attackRange = ScaleFloat(target.attackRange, mults.attackRange);
+        target.lightAttack = ScaleInt(target.lightAttack, mults.lightAttack);
+        target.heavyAttack = ScaleInt(target.heavyAttack, mults.heavyAttack);
+    }
+
+    private static int ScaleInt(int value, float factor)
+    {
+        if (Mathf.Approximately(factor, 1f)) return value;
+        // 0 means unset/legacy YAML; intentional zero-scale should use a tiny epsilon.
+        if (Mathf.Approximately(factor, 0f))
+        {
+            LogZeroMultiplierFactorOnce();
+            return value;
+        }
+
+        return Mathf.Max(0, Mathf.FloorToInt(value * factor));
+    }
+
+    private static float ScaleFloat(float value, float factor)
+    {
+        if (Mathf.Approximately(factor, 1f)) return value;
+        // 0 means unset/legacy YAML; intentional zero-scale should use a tiny epsilon.
+        if (Mathf.Approximately(factor, 0f))
+        {
+            LogZeroMultiplierFactorOnce();
+            return value;
+        }
+
+        return Mathf.Max(0f, value * factor);
+    }
+
+    private static void LogZeroMultiplierFactorOnce()
+    {
+        if (s_loggedZeroMultiplierFactor) return;
+        s_loggedZeroMultiplierFactor = true;
+        Debug.LogWarning(
+            "TechStatApply: multiplier factor ~0 treated as identity (unset/legacy asset). " +
+            "Use a tiny epsilon for intentional zero-scale; prefer setting factors to 1 on TechSO assets.");
     }
 }

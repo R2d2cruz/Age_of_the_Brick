@@ -53,3 +53,29 @@ MonoBehaviour:
     attackRange: 0
     lightAttack: 0
     heavyAttack: 0
+  unitMultipliers:
+    health: 1
+    lightDefense: 1
+    heavyDefense: 1
+    visionRange: 1
+    moveSpeed: 1
+    range: 1
+    attackSpeed: 1
+    lightAttack: 1
+    heavyAttack: 1
+    buildingMultiplier: 1
+    projectileTrackTime: 1
+    projectileSpeed: 1
+    healSpeed: 1
+    buildSpeed: 1
+    buildHealth: 1
+    gatherSpeed: 1
+  buildingMultipliers:
+    health: 1
+    lightDefense: 1
+    heavyDefense: 1
+    visionRange: 1
+    garrisonCapacity: 1
+    attackRange: 1
+    lightAttack: 1
+    heavyAttack: 1
