@@ -241,6 +241,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5629039364720240478, guid: 515e9b885ea1df34ba11ad39dc6b3a25, type: 3}
       insertIndex: 4
       addedObject: {fileID: 6862835057415486173}
+    - targetCorrespondingSourceObject: {fileID: 5629039364720240478, guid: 515e9b885ea1df34ba11ad39dc6b3a25, type: 3}
+      insertIndex: 5
+      addedObject: {fileID: 5123984756120938471}
   m_SourcePrefab: {fileID: 100100000, guid: 515e9b885ea1df34ba11ad39dc6b3a25, type: 3}
 --- !u!1 &614954035464766975 stripped
 GameObject:
@@ -300,6 +303,21 @@ MonoBehaviour:
       Value: {fileID: 3512405234939937652}
   maxCarryCapacity: 10
   extractionAmountPerCycle: 2
+--- !u!114 &5123984756120938471
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 614954035464766975}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f3e9a2c1b854d6e9f0a1b2c3d4e5f60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  defaultFleeDistance: 10
+  reFleeCooldownSeconds: 2.5
+  fleeTimeoutMarginSeconds: 2
 --- !u!4 &4862879326077348730 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 426424617166129627, guid: 515e9b885ea1df34ba11ad39dc6b3a25, type: 3}
