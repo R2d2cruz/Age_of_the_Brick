@@ -51,4 +51,9 @@ public interface IAttacker : IUnitComponent
     /// Stops the current attack action.
     /// </summary>
     void StopAttacking();
+
+    /// <summary>
+    /// True while this attacker has a live attack target (includes chase).
+    /// </summary>
+    bool IsInCombat { get; }
 }
