@@ -85,6 +85,10 @@ crashlytics-build.properties
 # TestRunner generated files
 InitTestScene*.unity*
 
+# Batchmode / Test Runner logs left at the project root
+TestResults*.xml
+unity-test-log.txt
+
 # Addressables default ignores, before user customizations
 /ServerData
 /[Aa]ssets/StreamingAssets/aa*
