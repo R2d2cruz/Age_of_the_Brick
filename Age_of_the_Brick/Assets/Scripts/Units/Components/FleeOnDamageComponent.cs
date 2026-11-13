@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 /// <summary>
 /// Makes the owning unit flee away from an enemy damage source, then idle under a short
@@ -134,6 +135,15 @@ public class FleeOnDamageComponent : BaseUnitComponent
 
         float speed = unit.currentStats != null ? Mathf.Max(0.01f, unit.currentStats.moveSpeed) : 1f;
         fleeTimeoutRemaining = distance / speed + Mathf.Max(0f, fleeTimeoutMarginSeconds);
+
+        // Gather Extracting leaves a completed path (remainingDistance ≈ 0). Without clearing it,
+        // MovingState treats the flee MoveTo as already arrived. Build Constructing usually still
+        // has remainingDistance toward the building center, so flee worked there without this.
+        if (unit.TryGetComponent(out NavMeshAgent agent))
+        {
+            agent.ResetPath();
+            agent.isStopped = false;
+        }
 
         issuingFleeMove = true;
         unit.MoveTo(fleePoint);
