@@ -162,7 +162,7 @@ public class Building : Selectable, IActionProvider
     public void UpdateStats(int era) => RefreshStats(era);
 
     /// <summary>
-    /// Recomputes runtime stats from the owner's current era base plus researched tech flats.
+    /// Recomputes runtime stats from the owner's current era base plus researched tech flats and multipliers.
     /// </summary>
     public void RefreshStats()
     {
@@ -173,7 +173,7 @@ public class Building : Selectable, IActionProvider
     }
 
     /// <summary>
-    /// Clones the era base stats and applies matching researched tech modifiers without mutating the ScriptableObject.
+    /// Clones the era base stats and applies matching researched tech flats then multipliers without mutating the ScriptableObject.
     /// </summary>
     private void RefreshStats(int era)
     {
@@ -191,6 +191,13 @@ public class Building : Selectable, IActionProvider
                 if (tech == null) continue;
                 if (!TechStatApply.MatchesBuilding(tech, stats)) continue;
                 TechStatApply.ApplyBuildingModifiers(next, tech.buildingModifiers);
+            }
+
+            foreach (TechSO tech in Owner.ResearchedTechs)
+            {
+                if (tech == null) continue;
+                if (!TechStatApply.MatchesBuilding(tech, stats)) continue;
+                TechStatApply.ApplyBuildingMultipliers(next, tech.buildingMultipliers);
             }
         }
 

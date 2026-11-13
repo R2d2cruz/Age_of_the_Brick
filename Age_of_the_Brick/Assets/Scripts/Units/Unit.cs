@@ -328,7 +328,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     }
 
     /// <summary>
-    /// Recomputes runtime stats from the owner's current era base plus researched tech flats.
+    /// Recomputes runtime stats from the owner's current era base plus researched tech flats and multipliers.
     /// </summary>
     public void RefreshStats()
     {
@@ -339,7 +339,7 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
     }
 
     /// <summary>
-    /// Clones the era base stats and applies matching researched tech modifiers without mutating the ScriptableObject.
+    /// Clones the era base stats and applies matching researched tech flats then multipliers without mutating the ScriptableObject.
     /// </summary>
     private void RefreshStats(int era)
     {
@@ -357,6 +357,13 @@ public class Unit : Selectable, IActionProvider, ISubMenuHandler
                 if (tech == null) continue;
                 if (!TechStatApply.MatchesUnit(tech, stats)) continue;
                 TechStatApply.ApplyUnitModifiers(next, tech.unitModifiers);
+            }
+
+            foreach (TechSO tech in Owner.ResearchedTechs)
+            {
+                if (tech == null) continue;
+                if (!TechStatApply.MatchesUnit(tech, stats)) continue;
+                TechStatApply.ApplyUnitMultipliers(next, tech.unitMultipliers);
             }
         }
 
